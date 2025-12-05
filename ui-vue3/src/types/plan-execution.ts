@@ -35,7 +35,6 @@ export interface StepData {
 export interface PlanData {
   title: string
   steps: StepData[]
-  directResponse: boolean
   planTemplateId?: string
   planType?: string
   replacementParams?: Record<string, string>
@@ -50,7 +49,6 @@ export interface PlanData {
 export interface DisplayPlanData {
   title: string
   steps: StepData[]
-  directResponse: boolean
   planTemplateId?: string
   planType?: string
 }

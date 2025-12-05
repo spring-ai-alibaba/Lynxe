@@ -15,6 +15,10 @@
  */
 package com.alibaba.cloud.ai.lynxe.runtime.controller;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +34,15 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -141,6 +147,12 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 	@Autowired
 	@Lazy
 	private StreamingResponseHandler streamingResponseHandler;
+
+	@Autowired
+	private com.alibaba.cloud.ai.lynxe.runtime.service.FileUploadService fileUploadService;
+
+	@Autowired
+	private com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager unifiedDirectoryManager;
 
 	public LynxeController(ObjectMapper objectMapper) {
 		this.objectMapper = objectMapper;
@@ -917,7 +929,7 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 			return null;
 		}
 
-		if (!StringUtils.hasText(conversationId)) {
+		if (!org.springframework.util.StringUtils.hasText(conversationId)) {
 			// Generate conversation ID for VUE_DIALOG and VUE_SIDEBAR requests
 			// Both should use the same conversation memory
 			if (requestSource == RequestSource.VUE_DIALOG || requestSource == RequestSource.VUE_SIDEBAR) {
@@ -931,6 +943,35 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 			logger.debug("Using provided conversation ID: {} (source: {})", conversationId, requestSource);
 		}
 		return conversationId;
+	}
+
+	/**
+	 * Build memory name from chat user input
+	 * @param userInput The user's chat input
+	 * @return Formatted memory name from user input
+	 */
+	private String buildMemoryNameFromChatInput(String userInput) {
+		if (userInput == null || userInput.trim().isEmpty()) {
+			return "Chat Conversation";
+		}
+
+		// Clean up the input
+		String cleaned = userInput.trim();
+
+		// Remove newlines and excessive whitespace
+		cleaned = cleaned.replaceAll("\\s+", " ").trim();
+
+		// Limit length to avoid excessively long names
+		if (cleaned.length() > 50) {
+			cleaned = cleaned.substring(0, 50) + "...";
+		}
+
+		// Ensure it's not empty after cleaning
+		if (cleaned.isEmpty()) {
+			return "Chat Conversation";
+		}
+
+		return cleaned;
 	}
 
 	/**
@@ -981,6 +1022,274 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 	}
 
 	/**
+	 * Create UserMessage with multi-media support (images)
+	 * @param input Text input from user
+	 * @param request Request map containing uploadKey (optional)
+	 * @return UserMessage with text and media if available
+	 */
+	private UserMessage createUserMessageWithMedia(String input, Map<String, Object> request) {
+		// Extract uploadKey from request
+		String uploadKey = (String) request.get("uploadKey");
+
+		// If no uploadKey, return simple text message (backward compatibility)
+		if (uploadKey == null || uploadKey.trim().isEmpty()) {
+			logger.debug("No uploadKey provided, creating text-only UserMessage");
+			return new UserMessage(input);
+		}
+
+		try {
+			// Get uploaded files for this uploadKey
+			List<com.alibaba.cloud.ai.lynxe.runtime.entity.vo.FileUploadResult.FileInfo> uploadedFiles = fileUploadService
+				.getUploadedFiles(uploadKey);
+
+			if (uploadedFiles == null || uploadedFiles.isEmpty()) {
+				logger.debug("No uploaded files found for uploadKey: {}, creating text-only UserMessage", uploadKey);
+				return new UserMessage(input);
+			}
+
+			// Process files using MarkdownConverterTool processors
+			List<Media> mediaList = new ArrayList<>();
+			StringBuilder enhancedInput = new StringBuilder(input);
+			Path uploadDirectory = unifiedDirectoryManager.getWorkingDirectory()
+				.resolve("uploaded_files")
+				.resolve(uploadKey);
+
+			// Use uploadKey as temporary planId for file processing
+			String tempPlanId = uploadKey;
+
+			for (com.alibaba.cloud.ai.lynxe.runtime.entity.vo.FileUploadResult.FileInfo fileInfo : uploadedFiles) {
+				// Skip failed uploads
+				if (!fileInfo.isSuccess()) {
+					logger.debug("Skipping failed file: {}", fileInfo.getOriginalName());
+					continue;
+				}
+
+				String mimeType = fileInfo.getType();
+				if (mimeType == null || mimeType.trim().isEmpty()) {
+					logger.debug("Skipping file with no MIME type: {}", fileInfo.getOriginalName());
+					continue;
+				}
+
+				Path filePath = uploadDirectory.resolve(fileInfo.getOriginalName());
+
+				if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+					logger.warn("File not found or not a regular file: {}", filePath);
+					continue;
+				}
+
+				// Process file using MarkdownConverterTool logic
+				try {
+					String fileExtension = getFileExtension(fileInfo.getOriginalName());
+					if (fileExtension.isEmpty()) {
+						logger.debug("Skipping file with no extension: {}", fileInfo.getOriginalName());
+						continue;
+					}
+
+					String ext = fileExtension.toLowerCase().substring(1);
+					String extractedText = processFileWithMarkdownConverter(filePath, ext, tempPlanId,
+							fileInfo.getOriginalName());
+
+					if (extractedText != null && !extractedText.trim().isEmpty()) {
+						enhancedInput.append("\n\n--- Content from file: ")
+							.append(fileInfo.getOriginalName())
+							.append(" ---\n\n")
+							.append(extractedText);
+						logger.info("Extracted {} characters from file: {}", extractedText.length(),
+								fileInfo.getOriginalName());
+					}
+					else {
+						// For image files, if text extraction fails or returns empty, try
+						// to add as Media
+						if (isImageExtension(ext)) {
+							try {
+								Resource fileResource = new FileSystemResource(filePath);
+								org.springframework.util.MimeType springMimeType = org.springframework.util.MimeTypeUtils
+									.parseMimeType(mimeType);
+								Media media = new Media(springMimeType, fileResource);
+								mediaList.add(media);
+								logger.debug("Added image media: {} with MIME type: {}", fileInfo.getOriginalName(),
+										mimeType);
+							}
+							catch (Exception e) {
+								logger.warn("Failed to create Media object for file: {}", fileInfo.getOriginalName(),
+										e);
+							}
+						}
+						else {
+							logger.warn("No content extracted from file: {}", fileInfo.getOriginalName());
+						}
+					}
+				}
+				catch (Exception e) {
+					logger.warn("Failed to process file: {}", fileInfo.getOriginalName(), e);
+					// Continue with other files
+				}
+			}
+
+			// Build UserMessage with text and media
+			String finalInput = enhancedInput.toString();
+			if (mediaList.isEmpty()) {
+				logger.debug("No image files found, creating text-only UserMessage");
+				return new UserMessage(finalInput);
+			}
+
+			logger.info("Creating UserMessage with {} image(s) for uploadKey: {}", mediaList.size(), uploadKey);
+			var builder = UserMessage.builder();
+			builder.text(finalInput);
+			for (Media media : mediaList) {
+				builder.media(media);
+			}
+			return builder.build();
+
+		}
+		catch (IllegalArgumentException e) {
+			logger.warn("Invalid uploadKey format: {}, creating text-only UserMessage", uploadKey, e);
+			return new UserMessage(input);
+		}
+		catch (IOException e) {
+			logger.warn("Failed to load uploaded files for uploadKey: {}, creating text-only UserMessage", uploadKey,
+					e);
+			return new UserMessage(input);
+		}
+		catch (Exception e) {
+			logger.error(
+					"Unexpected error while processing media files for uploadKey: {}, creating text-only UserMessage",
+					uploadKey, e);
+			return new UserMessage(input);
+		}
+	}
+
+	/**
+	 * Process file using MarkdownConverterTool processors
+	 * @param filePath Path to the file
+	 * @param extension File extension (without dot, e.g., "pdf", "jpg")
+	 * @param planId Plan ID for file operations (using uploadKey as temp planId)
+	 * @param filename Original filename for logging
+	 * @return Extracted text content or null if extraction fails
+	 */
+	private String processFileWithMarkdownConverter(Path filePath, String extension, String planId, String filename) {
+		try {
+			logger.debug("Processing file with MarkdownConverter: {} (extension: {})", filename, extension);
+
+			// Create processors (similar to MarkdownConverterTool)
+			com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.PdfToMarkdownProcessor pdfProcessor = null;
+			com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.ImageOcrProcessor imageProcessor = null;
+			com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.TextToMarkdownProcessor textProcessor = null;
+
+			// Initialize processors if needed
+			if (llmService != null && lynxeProperties != null) {
+				com.alibaba.cloud.ai.lynxe.runtime.executor.ImageRecognitionExecutorPool executorPool = new com.alibaba.cloud.ai.lynxe.runtime.executor.ImageRecognitionExecutorPool(
+						lynxeProperties);
+				com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.PdfOcrProcessor pdfOcrProcessor = new com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.PdfOcrProcessor(
+						unifiedDirectoryManager, llmService, lynxeProperties, executorPool);
+				pdfProcessor = new com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.PdfToMarkdownProcessor(
+						unifiedDirectoryManager, pdfOcrProcessor);
+				imageProcessor = new com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.ImageOcrProcessor(
+						unifiedDirectoryManager, llmService, lynxeProperties, executorPool);
+			}
+
+			// Text processor is always available
+			textProcessor = new com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.TextToMarkdownProcessor(
+					unifiedDirectoryManager);
+
+			// Dispatch to appropriate processor based on file extension
+			com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult result = switch (extension) {
+				case "pdf" -> {
+					if (pdfProcessor != null) {
+						yield pdfProcessor.convertToMarkdown(filePath, null, planId, false);
+					}
+					yield null;
+				}
+				case "jpg", "jpeg", "png", "gif" -> {
+					if (imageProcessor != null) {
+						String markdownFilename = generateMarkdownFilename(filename);
+						yield imageProcessor.convertImageToTextWithOcr(filePath, null, planId, markdownFilename);
+					}
+					yield null;
+				}
+				case "txt", "md", "json", "xml", "yaml", "yml", "log", "java", "py", "js", "html", "css" ->
+					textProcessor.convertToMarkdown(filePath, null, planId);
+				default -> {
+					logger.debug("Unsupported file extension for text extraction: {}", extension);
+					yield null;
+				}
+			};
+
+			if (result == null) {
+				return null;
+			}
+
+			// Extract text from ToolExecuteResult
+			String output = result.getOutput();
+			if (output == null || output.trim().isEmpty()) {
+				return null;
+			}
+
+			// Try to extract actual content from the result
+			// ToolExecuteResult may contain metadata, try to extract the actual content
+			if (output.contains("**Content**:\n\n")) {
+				int contentIndex = output.indexOf("**Content**:\n\n") + "**Content**:\n\n".length();
+				return output.substring(contentIndex).trim();
+			}
+
+			// If result indicates success, try to read the generated markdown file
+			if (output.toLowerCase().contains("successfully")) {
+				String markdownFilename = generateMarkdownFilename(filename);
+				Path markdownFile = unifiedDirectoryManager.getRootPlanDirectory(planId).resolve(markdownFilename);
+				if (Files.exists(markdownFile)) {
+					try {
+						return Files.readString(markdownFile);
+					}
+					catch (IOException e) {
+						logger.warn("Failed to read generated markdown file: {}", markdownFile, e);
+					}
+				}
+			}
+
+			// Return the output as-is if we can't extract better content
+			return output;
+
+		}
+		catch (Exception e) {
+			logger.error("Error processing file with MarkdownConverter: {}", filename, e);
+			return null;
+		}
+	}
+
+	/**
+	 * Get file extension including the dot
+	 */
+	private String getFileExtension(String fileName) {
+		int lastDotIndex = fileName.lastIndexOf('.');
+		return lastDotIndex > 0 ? fileName.substring(lastDotIndex) : "";
+	}
+
+	/**
+	 * Generate markdown filename by replacing extension with .md
+	 */
+	private String generateMarkdownFilename(String originalFilename) {
+		int lastDotIndex = originalFilename.lastIndexOf('.');
+		if (lastDotIndex > 0) {
+			return originalFilename.substring(0, lastDotIndex) + ".md";
+		}
+		return originalFilename + ".md";
+	}
+
+	/**
+	 * Check if file extension represents an image
+	 * @param extension File extension (without dot, e.g., "jpg", "png")
+	 * @return true if extension is an image type
+	 */
+	private boolean isImageExtension(String extension) {
+		if (extension == null || extension.trim().isEmpty()) {
+			return false;
+		}
+		String lowerExt = extension.toLowerCase().trim();
+		return lowerExt.equals("jpg") || lowerExt.equals("jpeg") || lowerExt.equals("png") || lowerExt.equals("gif")
+				|| lowerExt.equals("webp");
+	}
+
+	/**
 	 * Simple chat endpoint for standard LLM chat without plan execution with SSE
 	 * streaming
 	 * @param request Request containing input message, conversationId (optional),
@@ -1024,12 +1333,23 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 			emitter.completeWithError(ex);
 		});
 
+		// Store input for use in completion handler
+		final String userInput = input;
+
+		// Store variables for use in completion handler (using arrays to allow
+		// modification in lambda)
+		final String[] conversationIdHolder = new String[1];
+		final long[] chatStartTimeHolder = new long[1];
+
 		// Execute asynchronously
 		CompletableFuture.runAsync(() -> {
 			try {
 				// Validate or generate conversationId
 				String conversationId = validateOrGenerateConversationId((String) request.get("conversationId"),
 						requestSource);
+				conversationIdHolder[0] = conversationId;
+				// Record start time for chat ID generation
+				chatStartTimeHolder[0] = System.currentTimeMillis();
 
 				// Send initial event with conversationId
 				Map<String, Object> startData = new HashMap<>();
@@ -1061,8 +1381,8 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 					}
 				}
 
-				// Add user message
-				UserMessage userMessage = new UserMessage(input);
+				// Add user message with multi-media support
+				UserMessage userMessage = createUserMessageWithMedia(input, request);
 				messages.add(userMessage);
 
 				// Save user message to conversation memory
@@ -1121,20 +1441,53 @@ public class LynxeController implements LynxeListener<PlanExceptionEvent> {
 							finalText = "No response generated";
 						}
 
+						// Get conversationId and chatStartTime from holders
+						String currentConversationId = conversationIdHolder[0];
+						long currentChatStartTime = chatStartTimeHolder[0];
+
 						// Save assistant response to conversation memory
 						if (lynxeProperties != null && lynxeProperties.getEnableConversationMemory()
-								&& conversationId != null && !conversationId.trim().isEmpty()) {
+								&& currentConversationId != null && !currentConversationId.trim().isEmpty()) {
 							try {
 								AssistantMessage assistantMessage = new AssistantMessage(finalText);
 								llmService.addToConversationMemoryWithLimit(lynxeProperties.getMaxMemory(),
-										conversationId, assistantMessage);
+										currentConversationId, assistantMessage);
 								logger.debug("Saved assistant response to conversation memory for conversationId: {}",
-										conversationId);
+										currentConversationId);
 							}
 							catch (Exception e) {
 								logger.warn(
 										"Failed to save assistant response to conversation memory for conversationId: {}",
-										conversationId, e);
+										currentConversationId, e);
+							}
+						}
+
+						// Add chat ID to conversation memory with memory name (similar to
+						// how plan execution adds rootPlanId)
+						// This allows the chat conversation to be retrieved in history
+						// with a meaningful name
+						if (memoryService != null && currentConversationId != null
+								&& !currentConversationId.trim().isEmpty()) {
+							try {
+								// Generate a unique chat ID similar to rootPlanId format
+								// Format: "chat-{timestamp}_{random}_{threadId}"
+								int randomComponent = (int) (Math.random() * 10000);
+								long threadId = Thread.currentThread().getId();
+								String chatId = String.format("chat-%d_%d_%d", currentChatStartTime, randomComponent,
+										threadId);
+
+								// Build memory name from user input (similar to how plan
+								// execution uses step requirements)
+								String memoryName = buildMemoryNameFromChatInput(userInput);
+
+								// Use the new method specifically for chat scenarios
+								memoryService.addChatToConversation(currentConversationId, chatId, memoryName);
+								logger.info("Added chat ID {} to conversation {} with memoryName: {}", chatId,
+										currentConversationId, memoryName);
+							}
+							catch (Exception e) {
+								logger.warn("Failed to add chat ID to conversation memory for conversationId: {}",
+										currentConversationId, e);
 							}
 						}
 

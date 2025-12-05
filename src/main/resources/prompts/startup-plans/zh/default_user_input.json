@@ -8,7 +8,6 @@
       "terminateColumns": ""
     }
   ],
-  "directResponse": false,
   "planType": "dynamic_agent",
   "planTemplateId": "default-plan-id-001000222",
   "accessLevel": "readOnly",

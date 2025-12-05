@@ -854,6 +854,7 @@ const words: I18nType = {
     statusApiUrl: 'Status Query API',
     executing: 'Executing...',
     executePlan: 'Execute Plan',
+    stopTask: 'Stop Task',
     toolNameRequired: 'Tool name is required. Please ensure the template is properly configured',
     executionInProgress:
       'A task is currently executing. Please wait for it to complete before starting a new one',

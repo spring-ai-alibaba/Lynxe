@@ -6,8 +6,8 @@
 
     <groupId>com.lynxe</groupId>
     <name>Lynxe - AI Agent Management System</name>
-    <artifactId>lynxe</artifactId> 
-    <version>4.8.4</version>
+    <artifactId>lynxe</artifactId>
+    <version>4.8.5</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -117,13 +117,13 @@
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty-http</artifactId>
         </dependency>
-        
+
         <!-- Reactor Netty core for additional netty functionality -->
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty</artifactId>
         </dependency>
-        
+
         <!-- MacOS DNS resolver for better DNS resolution on MacOS -->
         <!-- Optional: improves DNS resolution performance on macOS, but not required -->
         <!-- The application will fallback to system defaults if native library fails to load -->
@@ -139,7 +139,7 @@
             <classifier>osx-x86_64</classifier>
             <optional>true</optional>
         </dependency>
-        
+
         <!-- Spring WebFlux -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -455,7 +455,6 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <fork>true</fork>
                     <addResources>false</addResources>
                     <executable>false</executable>
                     <layout>ZIP</layout>

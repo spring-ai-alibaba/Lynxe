@@ -62,9 +62,6 @@ public class PlanTemplateController {
 	private PlanTemplateService planTemplateService;
 
 	@Autowired
-	private PlanIdDispatcher planIdDispatcher;
-
-	@Autowired
 	private ObjectMapper objectMapper;
 
 	@Autowired
@@ -72,6 +69,9 @@ public class PlanTemplateController {
 
 	@Autowired
 	private PlanTemplateConfigService planTemplateConfigService;
+
+	@Autowired
+	private PlanIdDispatcher planIdDispatcher;
 
 	/**
 	 * Save version history
@@ -139,72 +139,6 @@ public class PlanTemplateController {
 		catch (Exception e) {
 			logger.error("Failed to parse plan JSON", e);
 			throw new RuntimeException("Failed to save version history: " + e.getMessage());
-		}
-	}
-
-	/**
-	 * Save plan
-	 * @param request Request containing plan ID and JSON
-	 * @return Save result
-	 */
-	@PostMapping("/save")
-	@Transactional
-	public ResponseEntity<Map<String, Object>> savePlan(@RequestBody Map<String, String> request) {
-		String planJson = request.get("planJson");
-
-		if (planJson == null || planJson.trim().isEmpty()) {
-			return ResponseEntity.badRequest().body(Map.of("error", "Plan data cannot be empty"));
-		}
-
-		try {
-			// Parse JSON to get planId
-			PlanInterface planData = objectMapper.readValue(planJson, PlanInterface.class);
-			String planId = planData.getPlanTemplateId();
-			if (planId == null) {
-				planId = planData.getRootPlanId();
-			}
-
-			// Check if planId is empty or starts with "new-", then generate a new one
-			if (planId == null || planId.trim().isEmpty() || planId.startsWith("new-")) {
-				String newPlanId = planIdDispatcher.generatePlanTemplateId();
-				logger.info("Original planId '{}' is empty or starts with 'new-', generated new planId: {}", planId,
-						newPlanId);
-
-				// Update the plan object with new ID
-				planData.setCurrentPlanId(newPlanId);
-				planData.setRootPlanId(newPlanId);
-
-				// Re-serialize the updated plan object to JSON
-				planJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(planData);
-				planId = newPlanId;
-			}
-
-			if (planId == null || planId.trim().isEmpty()) {
-				return ResponseEntity.badRequest().body(Map.of("error", "Plan ID cannot be found in JSON"));
-			}
-
-			// Save to version history
-			PlanTemplateService.VersionSaveResult saveResult = saveToVersionHistory(planJson, planId);
-
-			// Calculate version count
-			List<String> versions = planTemplateService.getPlanVersions(planId);
-			int versionCount = versions.size();
-
-			// Build response
-			Map<String, Object> response = new HashMap<>();
-			response.put("status", "success");
-			response.put("planId", planId);
-			response.put("versionCount", versionCount);
-			response.put("saved", saveResult.isSaved());
-			response.put("duplicate", saveResult.isDuplicate());
-			response.put("message", saveResult.getMessage());
-			response.put("versionIndex", saveResult.getVersionIndex());
-
-			return ResponseEntity.ok(response);
-		}
-		catch (Exception e) {
-			logger.error("Failed to save plan", e);
-			return ResponseEntity.internalServerError().body(Map.of("error", "Failed to save plan: " + e.getMessage()));
 		}
 	}
 
@@ -425,11 +359,21 @@ public class PlanTemplateController {
 			PlanTemplateConfigVO resultConfigVO = planTemplateConfigService
 				.createOrUpdateCoordinatorToolFromPlanTemplateConfig(configVO);
 
+			// Get the actual planTemplateId from result (may be different if frontend
+			// sent "new-xxx")
+			String actualPlanTemplateId = resultConfigVO != null && resultConfigVO.getPlanTemplateId() != null
+					? resultConfigVO.getPlanTemplateId() : planTemplateId;
+
 			// Build simple response
 			Map<String, Object> response = new HashMap<>();
 			response.put("success", true);
-			response.put("planTemplateId", planTemplateId);
+			response.put("planTemplateId", actualPlanTemplateId);
 			response.put("toolRegistered", resultConfigVO != null && resultConfigVO.getToolConfig() != null);
+
+			// Log if planTemplateId was replaced
+			if (!actualPlanTemplateId.equals(planTemplateId)) {
+				logger.info("PlanTemplateId replaced from '{}' to '{}'", planTemplateId, actualPlanTemplateId);
+			}
 
 			return ResponseEntity.ok(response);
 
@@ -481,7 +425,6 @@ public class PlanTemplateController {
 					configVO.setTitle(planTemplate.getTitle());
 					configVO.setPlanType(planInterface.getPlanType());
 					configVO.setServiceGroup(planTemplate.getServiceGroup());
-					configVO.setDirectResponse(planInterface.isDirectResponse());
 					configVO.setAccessLevel(planTemplate.getAccessLevel());
 					// Set createTime and updateTime from PlanTemplateConfigVO
 					configVO.setCreateTime(planTemplate.getCreateTime());
@@ -615,7 +558,6 @@ public class PlanTemplateController {
 			configVO.setTitle(planTemplate.getTitle());
 			configVO.setPlanType(planInterface.getPlanType());
 			configVO.setServiceGroup(planTemplate.getServiceGroup());
-			configVO.setDirectResponse(planInterface.isDirectResponse());
 			configVO.setAccessLevel(planTemplate.getAccessLevel());
 			// Set createTime and updateTime from PlanTemplateConfigVO
 			configVO.setCreateTime(planTemplate.getCreateTime());
@@ -654,6 +596,24 @@ public class PlanTemplateController {
 		catch (Exception e) {
 			logger.error("Failed to get plan template configuration for planTemplateId: {}", planTemplateId, e);
 			return ResponseEntity.internalServerError().build();
+		}
+	}
+
+	/**
+	 * Generate a new plan template ID
+	 * @return Generated plan template ID
+	 */
+	@GetMapping("/generate-plan-template-id")
+	public ResponseEntity<Map<String, Object>> generatePlanTemplateId() {
+		try {
+			String planTemplateId = planIdDispatcher.generatePlanTemplateId();
+			logger.info("Generated new plan template ID: {}", planTemplateId);
+			return ResponseEntity.ok(Map.of("planTemplateId", planTemplateId));
+		}
+		catch (Exception e) {
+			logger.error("Failed to generate plan template ID", e);
+			return ResponseEntity.internalServerError()
+				.body(Map.of("error", "Failed to generate plan template ID: " + e.getMessage()));
 		}
 	}
 

@@ -446,7 +446,7 @@ const selectedApiKey = computed({
 // Computed property for new model API key - always empty to require user input
 const newModelApiKey = computed({
   get() {
-    return ''
+    return newModel.apiKey || '';
   },
   set(val) {
     newModel.apiKey = val

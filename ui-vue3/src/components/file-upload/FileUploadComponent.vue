@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch } from 'vue'
+import { ref, onUnmounted, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -62,6 +62,7 @@ import {
   type DeleteFileResponse,
   type FileUploadResult,
 } from '@/api/file-upload-api-service'
+import { useFileUploadSingleton } from '@/composables/useFileUpload'
 
 const { t } = useI18n()
 
@@ -87,17 +88,21 @@ const props = withDefaults(defineProps<FileUploadProps>(), {
 
 const emit = defineEmits<Emits>()
 
+// Shared file upload state
+const fileUpload = useFileUploadSingleton()
+
 // Reactive state
 const fileInputRef = ref<HTMLInputElement>()
-const uploadedFiles = ref<FileInfo[]>([])
 const isUploading = ref(false)
-const uploadKey = ref<string | null>(null)
+
+// Use shared state for uploadedFiles and uploadKey
+// uploadedFiles is a reactive array (not a ref), so access directly
+const uploadedFiles = computed(() => Array.from(fileUpload.uploadedFiles))
 
 // Function to reset session when starting a new conversation session
 const resetSession = () => {
   console.log('[FileUpload] Resetting session and clearing uploadKey')
-  uploadedFiles.value = []
-  uploadKey.value = null
+  fileUpload.clearFiles()
   emit('upload-key-changed', null)
 }
 
@@ -108,9 +113,9 @@ onUnmounted(() => {
 
 // Watch for file changes to emit events
 watch(
-  () => uploadedFiles.value,
+  () => fileUpload.uploadedFiles,
   newFiles => {
-    emit('files-removed', newFiles)
+    emit('files-removed', Array.from(newFiles))
   },
   { deep: true }
 )
@@ -154,33 +159,35 @@ const uploadFiles = async (files: File[]) => {
     const result: FileUploadResult = await FileUploadApiService.uploadFiles(files)
 
     if (result.success) {
-      // Set uploadKey for file management
-      if (!uploadKey.value && result.uploadKey) {
-        uploadKey.value = result.uploadKey
-        console.log('[FileUpload] Set uploadKey:', uploadKey.value)
+      // Update shared state
+      const currentKey = fileUpload.uploadKey.value
+      if (!currentKey && result.uploadKey) {
         // New upload session - replace entire array
-        uploadedFiles.value = result.uploadedFiles
-      } else if (uploadKey.value) {
-        console.log('[FileUpload] Using existing uploadKey:', uploadKey.value)
+        console.log('[FileUpload] New upload session, setting uploadKey:', result.uploadKey)
+        fileUpload.setUploadedFiles(result.uploadedFiles, result.uploadKey)
+      } else if (currentKey) {
         // Existing upload session - append to existing files
-        uploadedFiles.value = [...uploadedFiles.value, ...result.uploadedFiles]
+        console.log('[FileUpload] Using existing uploadKey:', currentKey)
+        fileUpload.addUploadedFiles(result.uploadedFiles)
+        // Update uploadKey if it changed
+        if (result.uploadKey && result.uploadKey !== currentKey) {
+          fileUpload.setUploadedFiles(Array.from(fileUpload.uploadedFiles), result.uploadKey)
+        }
       } else {
         console.warn('[FileUpload] No uploadKey returned from upload')
         // Fallback - replace entire array
-        uploadedFiles.value = result.uploadedFiles
+        fileUpload.setUploadedFiles(result.uploadedFiles, null)
       }
 
-      // Save uploadKey locally
-      if (result.uploadKey) {
-        uploadKey.value = result.uploadKey
-        console.log('[Input] Saved uploadKey locally:', result.uploadKey)
-        emit('upload-key-changed', uploadKey.value)
+      // Emit events for parent components
+      const finalFiles = Array.from(fileUpload.uploadedFiles)
+      const finalKey = fileUpload.uploadKey.value
+      console.log('[FileUpload] Updated shared state - files:', finalFiles.length, 'key:', finalKey)
+
+      if (finalKey) {
+        emit('upload-key-changed', finalKey)
       }
-
-      console.log('[Input] Updated global uploadedFiles state:', uploadedFiles.value)
-
-      // Emit files uploaded event
-      emit('files-uploaded', uploadedFiles.value, uploadKey.value)
+      emit('files-uploaded', finalFiles, finalKey)
     }
 
     // Show success message or update UI as needed
@@ -197,12 +204,13 @@ const uploadFiles = async (files: File[]) => {
 // File management functions
 const removeFile = async (fileToRemove: FileInfo) => {
   try {
-    console.log('🗑️ Removing file:', fileToRemove.originalName, 'from uploadKey:', uploadKey)
+    const currentKey = fileUpload.uploadKey.value
+    console.log('🗑️ Removing file:', fileToRemove.originalName, 'from uploadKey:', currentKey)
 
     // Call backend API to delete the file from the server
-    if (uploadKey.value) {
+    if (currentKey) {
       const result: DeleteFileResponse = await FileUploadApiService.deleteFile(
-        uploadKey.value,
+        currentKey,
         fileToRemove.originalName
       )
       if (result.success) {
@@ -212,19 +220,19 @@ const removeFile = async (fileToRemove: FileInfo) => {
       }
     }
 
-    // Update frontend state
-    uploadedFiles.value = uploadedFiles.value.filter(
-      file => file.originalName !== fileToRemove.originalName
-    )
+    // Update shared state
+    fileUpload.removeFile(fileToRemove.originalName)
 
-    // Clear uploadKey to force new plan for new files if no files remain
-    if (uploadedFiles.value.length === 0) {
-      console.log('[FileUpload] 🧹 Clearing uploadKey to force new plan for new files')
-      uploadKey.value = null
+    // Emit events
+    const remainingFiles = Array.from(fileUpload.uploadedFiles)
+
+    if (remainingFiles.length === 0) {
+      console.log('[FileUpload] 🧹 All files removed, clearing uploadKey')
       emit('upload-key-changed', null)
     }
 
-    console.log('🎉 File removal completed, remaining files:', uploadedFiles.value.length)
+    emit('files-removed', remainingFiles)
+    console.log('🎉 File removal completed, remaining files:', remainingFiles.length)
   } catch (error) {
     console.error('❌ Error removing file:', error)
     emit('upload-error', error)
@@ -241,8 +249,12 @@ const formatFileSize = (bytes: number): string => {
 
 // Expose methods and state to parent component
 defineExpose({
-  uploadedFiles,
-  uploadKey,
+  get uploadedFiles() {
+    return Array.from(fileUpload.uploadedFiles)
+  },
+  get uploadKey() {
+    return fileUpload.uploadKey.value
+  },
   resetSession,
   uploadFiles,
   removeFile,

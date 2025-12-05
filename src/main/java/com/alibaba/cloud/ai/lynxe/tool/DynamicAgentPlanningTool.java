@@ -107,16 +107,13 @@ public class DynamicAgentPlanningTool extends AbstractBaseTool<DynamicAgentPlann
 
 		private String terminateColumns;
 
-		private boolean directResponse = false;
-
 		public DynamicAgentPlanningInput() {
 		}
 
-		public DynamicAgentPlanningInput(String title, StepDefinition step, boolean directResponse) {
+		public DynamicAgentPlanningInput(String title, StepDefinition step) {
 			this.title = title;
 			this.step = step;
 			this.terminateColumns = null;
-			this.directResponse = directResponse;
 		}
 
 		public String getTitle() {
@@ -141,14 +138,6 @@ public class DynamicAgentPlanningTool extends AbstractBaseTool<DynamicAgentPlann
 
 		public void setTerminateColumns(String terminateColumns) {
 			this.terminateColumns = terminateColumns;
-		}
-
-		public boolean isDirectResponse() {
-			return directResponse;
-		}
-
-		public void setDirectResponse(boolean directResponse) {
-			this.directResponse = directResponse;
 		}
 
 	}
@@ -253,17 +242,6 @@ public class DynamicAgentPlanningTool extends AbstractBaseTool<DynamicAgentPlann
 	public ToolExecuteResult run(DynamicAgentPlanningInput input) {
 		String title = input.getTitle();
 		StepDefinition step = input.getStep();
-		boolean directResponse = input.isDirectResponse();
-		// Support directResponse mode
-		if (directResponse) {
-			log.info("Direct response mode enabled for dynamic agent");
-			DynamicAgentExecutionPlan plan = new DynamicAgentExecutionPlan();
-			plan.setTitle(title);
-			plan.setDirectResponse(true);
-
-			this.currentPlan = plan;
-			return new ToolExecuteResult("Direct response mode: dynamic agent plan created successfully");
-		}
 
 		// Convert single step to list for internal processing
 		List<StepDefinition> steps = step != null ? List.of(step) : new ArrayList<>();

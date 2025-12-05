@@ -24,8 +24,8 @@ import org.springframework.stereotype.Component;
 import com.alibaba.cloud.ai.lynxe.config.LynxeProperties;
 import com.alibaba.cloud.ai.lynxe.tool.AbstractBaseTool;
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
-import com.alibaba.cloud.ai.lynxe.tool.i18n.ToolI18nService;
 import com.alibaba.cloud.ai.lynxe.tool.database.action.ExecuteSqlAction;
+import com.alibaba.cloud.ai.lynxe.tool.i18n.ToolI18nService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
@@ -35,14 +35,11 @@ public class DatabaseWriteTool extends AbstractBaseTool<DatabaseRequest> {
 
 	private final DataSourceService dataSourceService;
 
-	private final ObjectMapper objectMapper;
-
 	private final ToolI18nService toolI18nService;
 
 	public DatabaseWriteTool(LynxeProperties lynxeProperties, DataSourceService dataSourceService,
 			ObjectMapper objectMapper, ToolI18nService toolI18nService) {
 		this.dataSourceService = dataSourceService;
-		this.objectMapper = objectMapper;
 		this.toolI18nService = toolI18nService;
 	}
 

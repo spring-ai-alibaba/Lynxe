@@ -18,17 +18,18 @@ package com.alibaba.cloud.ai.lynxe.workspace.conversation.entity.po;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import jakarta.persistence.CollectionTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 /**
@@ -54,14 +55,14 @@ public class MemoryEntity {
 	private Date createTime;
 
 	/**
-	 * List of root plan IDs associated with this conversation Each rootPlanId corresponds
-	 * to a complete dialog round (user query + assistant response) The plan execution
-	 * records contain all the actual message content and execution details
+	 * List of plan mappings associated with this conversation Each mapping contains a
+	 * rootPlanId and createTime timestamp The rootPlanId corresponds to a complete dialog
+	 * round (user query + assistant response) The plan execution records contain all the
+	 * actual message content and execution details
 	 */
-	@ElementCollection(fetch = FetchType.EAGER)
-	@CollectionTable(name = "memory_plan_mappings", joinColumns = @JoinColumn(name = "memory_id"))
-	@Column(name = "root_plan_id", nullable = false)
-	private List<String> rootPlanIds = new ArrayList<>();
+	@OneToMany(mappedBy = "memory", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+	@OrderBy("createTime ASC")
+	private List<MemoryPlanMapping> planMappings = new ArrayList<>();
 
 	/**
 	 * Note: The @OneToMany relationship to ConversationMessage has been removed. This
@@ -112,22 +113,61 @@ public class MemoryEntity {
 		this.createTime = createTime;
 	}
 
-	public List<String> getRootPlanIds() {
-		return rootPlanIds;
+	/**
+	 * Get list of plan mappings (includes rootPlanId and createTime)
+	 * @return List of MemoryPlanMapping
+	 */
+	public List<MemoryPlanMapping> getPlanMappings() {
+		return planMappings;
 	}
 
-	public void setRootPlanIds(List<String> rootPlanIds) {
-		this.rootPlanIds = rootPlanIds;
+	public void setPlanMappings(List<MemoryPlanMapping> planMappings) {
+		this.planMappings = planMappings;
 	}
 
 	/**
-	 * Add a root plan ID to this conversation
+	 * Get list of root plan IDs (for backward compatibility)
+	 * @return List of root plan ID strings
+	 */
+	public List<String> getRootPlanIds() {
+		if (planMappings == null) {
+			return new ArrayList<>();
+		}
+		return planMappings.stream().map(MemoryPlanMapping::getRootPlanId).collect(Collectors.toList());
+	}
+
+	/**
+	 * Set root plan IDs (for backward compatibility) Creates new mappings with current
+	 * timestamp for each ID
+	 * @param rootPlanIds List of root plan IDs
+	 */
+	public void setRootPlanIds(List<String> rootPlanIds) {
+		if (rootPlanIds == null) {
+			this.planMappings = new ArrayList<>();
+			return;
+		}
+		// Clear existing mappings
+		this.planMappings.clear();
+		// Create new mappings for each rootPlanId
+		for (String rootPlanId : rootPlanIds) {
+			if (rootPlanId != null && !rootPlanId.trim().isEmpty()) {
+				MemoryPlanMapping mapping = new MemoryPlanMapping(this, rootPlanId);
+				this.planMappings.add(mapping);
+			}
+		}
+	}
+
+	/**
+	 * Add a root plan ID to this conversation with current timestamp
 	 * @param rootPlanId The root plan ID to add
 	 */
 	public void addRootPlanId(String rootPlanId) {
 		if (rootPlanId != null && !rootPlanId.trim().isEmpty()) {
-			if (!this.rootPlanIds.contains(rootPlanId)) {
-				this.rootPlanIds.add(rootPlanId);
+			// Check if mapping already exists
+			boolean exists = planMappings.stream().anyMatch(mapping -> rootPlanId.equals(mapping.getRootPlanId()));
+			if (!exists) {
+				MemoryPlanMapping mapping = new MemoryPlanMapping(this, rootPlanId);
+				planMappings.add(mapping);
 			}
 		}
 	}
@@ -137,7 +177,9 @@ public class MemoryEntity {
 	 * @param rootPlanId The root plan ID to remove
 	 */
 	public void removeRootPlanId(String rootPlanId) {
-		this.rootPlanIds.remove(rootPlanId);
+		if (rootPlanId != null && planMappings != null) {
+			planMappings.removeIf(mapping -> rootPlanId.equals(mapping.getRootPlanId()));
+		}
 	}
 
 }

@@ -56,7 +56,7 @@ public class LynxeProperties {
 
 	@ConfigProperty(group = "lynxe", subGroup = "browser", key = "requestTimeout",
 			path = "lynxe.browser.requestTimeout", description = "lynxe.browser.requestTimeout.description",
-			defaultValue = "180", inputType = ConfigInputType.NUMBER)
+			defaultValue = "30", inputType = ConfigInputType.NUMBER)
 	private volatile Integer browserRequestTimeout;
 
 	public Integer getBrowserRequestTimeout() {

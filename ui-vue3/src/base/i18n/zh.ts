@@ -804,6 +804,7 @@ const words: I18nType = {
     statusApiUrl: '状态查询 API',
     executing: '执行中...',
     executePlan: '执行计划',
+    stopTask: '停止任务',
     toolNameRequired: '工具名称是必需的，请确保模板已正确配置',
     executionInProgress: '当前有任务正在执行中，请等待完成后再发起新任务',
     publishMcpService: '发布为工具服务',

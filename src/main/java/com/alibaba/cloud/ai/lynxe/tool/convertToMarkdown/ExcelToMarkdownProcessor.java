@@ -123,7 +123,6 @@ public class ExcelToMarkdownProcessor {
 	private boolean markdownFileExists(String currentPlanId, String markdownFilename) {
 		try {
 			Path rootPlanDir = directoryManager.getRootPlanDirectory(currentPlanId);
-			Path targetDir = rootPlanDir;
 			Path markdownFile = rootPlanDir.resolve(markdownFilename);
 			return Files.exists(markdownFile);
 		}
@@ -578,7 +577,6 @@ public class ExcelToMarkdownProcessor {
 	private Path saveMarkdownFile(String content, String filename, String currentPlanId) {
 		try {
 			Path rootPlanDir = directoryManager.getRootPlanDirectory(currentPlanId);
-			Path targetDir = rootPlanDir;
 			Path outputFile = rootPlanDir.resolve(filename);
 
 			Files.write(outputFile, content.getBytes("UTF-8"), StandardOpenOption.CREATE,

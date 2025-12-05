@@ -499,6 +499,9 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 
 			// Generate ARIA snapshot using the new AriaSnapshot utility with error
 			// handling
+			// Note: AriaSnapshot now returns error messages instead of throwing
+			// exceptions
+			// for timeouts, so the flow continues normally
 			try {
 				AriaSnapshotOptions snapshotOptions = new AriaSnapshotOptions().setSelector("body")
 					.setTimeout(getBrowserTimeout() * 1000); // Convert to milliseconds
@@ -511,6 +514,8 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 				String snapshot = AriaElementHelper.parsePageAndAssignRefs(page, snapshotOptions, compressUrl,
 						shortUrlService, rootPlanId);
 				if (snapshot != null && !snapshot.trim().isEmpty()) {
+					// Snapshot may contain error message if timeout occurred, which is
+					// fine
 					state.put("interactive_elements", snapshot);
 				}
 				else {
@@ -519,11 +524,13 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 			}
 			catch (PlaywrightException e) {
 				log.warn("Playwright error getting ARIA snapshot: {}", e.getMessage());
-				state.put("interactive_elements", "Error getting interactive elements: " + e.getMessage());
+				state.put("interactive_elements", "Error getting interactive elements: " + e.getMessage()
+						+ ". You can continue with available page information (URL, title, tabs).");
 			}
 			catch (Exception e) {
 				log.warn("Unexpected error getting ARIA snapshot: {}", e.getMessage());
-				state.put("interactive_elements", "Error getting interactive elements: " + e.getMessage());
+				state.put("interactive_elements", "Error getting interactive elements: " + e.getMessage()
+						+ ". You can continue with available page information (URL, title, tabs).");
 			}
 
 			return state;
@@ -571,64 +578,75 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 					""";
 		}
 
-		DriverWrapper driver = getDriver();
-		Map<String, Object> state = getCurrentState(driver.getCurrentPage());
-		// Build URL and title information
-		String urlInfo = String.format("\n   URL: %s\n   Title: %s", state.get("url"), state.get("title"));
+		try {
+			DriverWrapper driver = getDriver();
+			Map<String, Object> state = getCurrentState(driver.getCurrentPage());
+			// Build URL and title information
+			String urlInfo = String.format("\n   URL: %s\n   Title: %s", state.get("url"), state.get("title"));
 
-		// Build tab information
+			// Build tab information
 
-		List<Map<String, Object>> tabs = (List<Map<String, Object>>) state.get("tabs");
-		String tabsInfo = (tabs != null) ? String.format("\n   %d tab(s) available", tabs.size()) : "";
-		if (tabs != null) {
-			for (int i = 0; i < tabs.size(); i++) {
-				Map<String, Object> tab = tabs.get(i);
-				String tabUrl = (String) tab.get("url");
-				String tabTitle = (String) tab.get("title");
-				tabsInfo += String.format("\n   [%d] %s: %s", i, tabTitle, tabUrl);
+			List<Map<String, Object>> tabs = (List<Map<String, Object>>) state.get("tabs");
+			String tabsInfo = (tabs != null) ? String.format("\n   %d tab(s) available", tabs.size()) : "";
+			if (tabs != null) {
+				for (int i = 0; i < tabs.size(); i++) {
+					Map<String, Object> tab = tabs.get(i);
+					String tabUrl = (String) tab.get("url");
+					String tabTitle = (String) tab.get("title");
+					tabsInfo += String.format("\n   [%d] %s: %s", i, tabTitle, tabUrl);
+				}
 			}
+			// Get scroll information
+			Object scrollInfoObj = state.get("scroll_info");
+			String contentAbove = "";
+			String contentBelow = "";
+			if (scrollInfoObj instanceof Map<?, ?> scrollInfoMap) {
+
+				Map<String, Object> scrollInfo = (Map<String, Object>) scrollInfoMap;
+				Object pixelsAboveObj = scrollInfo.get("pixels_above");
+				Object pixelsBelowObj = scrollInfo.get("pixels_below");
+
+				if (pixelsAboveObj instanceof Long pixelsAbove) {
+					contentAbove = pixelsAbove > 0 ? String.format(" (%d pixels)", pixelsAbove) : "";
+				}
+				if (pixelsBelowObj instanceof Long pixelsBelow) {
+					contentBelow = pixelsBelow > 0 ? String.format(" (%d pixels)", pixelsBelow) : "";
+				}
+			}
+
+			// Get interactive element information
+			String elementsInfo = (String) state.get("interactive_elements");
+
+			// Build final status string
+			String retString = String.format("""
+
+					- Current URL and page title:
+					%s
+
+					- Available tabs:
+					%s
+
+					- Interactive elements and their indices:
+					%s
+
+					- Content above%s or below%s the viewport (if indicated)
+
+					- Any action results or errors:
+					%s
+					""", urlInfo, tabsInfo, elementsInfo != null ? elementsInfo : "", contentAbove, contentBelow,
+					state.containsKey("error") ? state.get("error") : "");
+
+			return retString;
 		}
-		// Get scroll information
-		Object scrollInfoObj = state.get("scroll_info");
-		String contentAbove = "";
-		String contentBelow = "";
-		if (scrollInfoObj instanceof Map<?, ?> scrollInfoMap) {
-
-			Map<String, Object> scrollInfo = (Map<String, Object>) scrollInfoMap;
-			Object pixelsAboveObj = scrollInfo.get("pixels_above");
-			Object pixelsBelowObj = scrollInfo.get("pixels_below");
-
-			if (pixelsAboveObj instanceof Long pixelsAbove) {
-				contentAbove = pixelsAbove > 0 ? String.format(" (%d pixels)", pixelsAbove) : "";
-			}
-			if (pixelsBelowObj instanceof Long pixelsBelow) {
-				contentBelow = pixelsBelow > 0 ? String.format(" (%d pixels)", pixelsBelow) : "";
-			}
+		catch (Exception e) {
+			// Handle any unexpected errors gracefully - return a valid state string
+			// This ensures the flow continues even if state retrieval fails
+			log.warn("Error getting browser tool state string (non-fatal): {}", e.getMessage(), e);
+			return String.format("""
+					Browser tool state retrieval encountered an error: %s
+					You can continue with available browser information or try again.
+					""", e.getMessage());
 		}
-
-		// Get interactive element information
-		String elementsInfo = (String) state.get("interactive_elements");
-
-		// Build final status string
-		String retString = String.format("""
-
-				- Current URL and page title:
-				%s
-
-				- Available tabs:
-				%s
-
-				- Interactive elements and their indices:
-				%s
-
-				- Content above%s or below%s the viewport (if indicated)
-
-				- Any action results or errors:
-				%s
-				""", urlInfo, tabsInfo, elementsInfo != null ? elementsInfo : "", contentAbove, contentBelow,
-				state.containsKey("error") ? state.get("error") : "");
-
-		return retString;
 	}
 
 	// cleanup method already exists, just ensure it conforms to interface specification

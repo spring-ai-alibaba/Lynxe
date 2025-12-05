@@ -81,9 +81,11 @@
 <script setup lang="ts">
 import { FileInfo } from '@/api/file-upload-api-service'
 import FileUploadComponent from '@/components/file-upload/FileUploadComponent.vue'
+import { useFileUploadSingleton } from '@/composables/useFileUpload'
 import { useMessageDialogSingleton } from '@/composables/useMessageDialog'
 import { usePlanExecutionSingleton } from '@/composables/usePlanExecution'
 import { usePlanTemplateConfigSingleton } from '@/composables/usePlanTemplateConfig'
+import { useTaskStop } from '@/composables/useTaskStop'
 import { useTaskStore } from '@/stores/task'
 import type { InputMessage } from '@/types/message-dialog'
 import { Icon } from '@iconify/vue'
@@ -95,6 +97,8 @@ const taskStore = useTaskStore()
 const templateConfig = usePlanTemplateConfigSingleton()
 const messageDialog = useMessageDialogSingleton()
 const planExecution = usePlanExecutionSingleton()
+const { stopTask } = useTaskStop()
+const fileUpload = useFileUploadSingleton()
 
 // Track if task is running
 const isTaskRunning = computed(() => taskStore.hasRunningTask())
@@ -133,8 +137,8 @@ const currentPlaceholder = computed(() => {
   }
   return defaultPlaceholder.value
 })
-const uploadedFiles = ref<string[]>([])
-const uploadKey = ref<string | null>(null)
+// Use shared file upload state
+const uploadedFiles = computed(() => fileUpload.getUploadedFileNames())
 const selectedOption = ref('chat') // Default to chat mode
 const innerToolOptions = ref<InnerToolOption[]>([])
 const isLoadingTools = ref(false)
@@ -412,34 +416,45 @@ const resetSession = () => {
 onUnmounted(() => {
   resetSession()
 })
-// File upload event handlers
+// File upload event handlers - now just update placeholder based on shared state
 const handleFilesUploaded = (files: FileInfo[], key: string | null) => {
-  uploadedFiles.value = files.map(file => file.originalName)
-  uploadKey.value = key
-  console.log('[InputArea] Files uploaded:', files.length, 'uploadKey:', key)
-
-  // Update placeholder to show files are attached
-  if (uploadedFiles.value.length > 0) {
-    fileUploadPlaceholder.value = t('input.filesAttached', { count: uploadedFiles.value.length })
-  }
+  console.log('[InputArea] Files uploaded event received:', files.length, 'uploadKey:', key)
+  // State is already updated in shared composable, just update placeholder
+  updateFileUploadPlaceholder()
 }
 
 const handleFilesRemoved = (files: FileInfo[]) => {
-  uploadedFiles.value = files.map(file => file.originalName)
-  console.log('[InputArea] Files removed, remaining:', files.length)
-
-  // Update placeholder
-  if (uploadedFiles.value.length === 0) {
-    fileUploadPlaceholder.value = null
-  } else {
-    fileUploadPlaceholder.value = t('input.filesAttached', { count: uploadedFiles.value.length })
-  }
+  console.log('[InputArea] Files removed event received, remaining:', files.length)
+  // State is already updated in shared composable, just update placeholder
+  updateFileUploadPlaceholder()
 }
 
 const handleUploadKeyChanged = (key: string | null) => {
-  uploadKey.value = key
   console.log('[InputArea] Upload key changed:', key)
+  // State is already updated in shared composable
 }
+
+// Update placeholder based on shared state
+const updateFileUploadPlaceholder = () => {
+  // uploadedFiles is a reactive array, not a ref, so access directly
+  const fileCount = fileUpload.uploadedFiles.length
+  if (fileCount > 0) {
+    fileUploadPlaceholder.value = t('input.filesAttached', { count: fileCount })
+  } else {
+    fileUploadPlaceholder.value = null
+  }
+}
+
+// Watch shared state to update placeholder
+watch(
+  () => {
+    // uploadedFiles is a reactive array, not a ref, so access directly
+    return fileUpload.uploadedFiles.length
+  },
+  () => {
+    updateFileUploadPlaceholder()
+  }
+)
 
 const handleUploadStarted = () => {
   console.log('[InputArea] Upload started')
@@ -523,13 +538,14 @@ const handleSend = async () => {
   // Prepare query with tool information if selected
   const query: InputMessage = {
     input: finalInput,
-    uploadedFiles: uploadedFiles.value,
+    uploadedFiles: uploadedFiles.value, // Computed from shared state
   }
 
-  // Add uploadKey if it exists
-  if (uploadKey.value) {
-    query.uploadKey = uploadKey.value
-    console.log('[InputArea] Including uploadKey in message:', uploadKey.value)
+  // Add uploadKey if it exists (from shared state)
+  const currentUploadKey = fileUpload.uploadKey.value
+  if (currentUploadKey) {
+    query.uploadKey = currentUploadKey
+    console.log('[InputArea] Including uploadKey in message:', currentUploadKey)
   } else {
     console.log('[InputArea] No uploadKey available for message')
   }
@@ -574,7 +590,7 @@ const handleSend = async () => {
 
 const handleStop = async () => {
   console.log('[InputArea] Stop button clicked')
-  const success = await taskStore.stopCurrentTask()
+  const success = await stopTask()
   if (success) {
     console.log('[InputArea] Task stopped successfully')
   } else {
@@ -636,10 +652,10 @@ defineExpose({
   getQuery,
   focus: () => inputRef.value?.focus(),
   get uploadedFiles() {
-    return fileUploadRef.value?.uploadedFiles?.map(f => f.originalName) || []
+    return fileUpload.getUploadedFileNames()
   },
   get uploadKey() {
-    return fileUploadRef.value?.uploadKey || null
+    return fileUpload.uploadKey.value
   },
 })
 </script>

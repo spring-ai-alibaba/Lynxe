@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.TimeoutError;
 
 /**
  * Utility class for generating ARIA snapshots of pages, using Playwright's native
@@ -107,9 +108,25 @@ public class AriaSnapshot {
 			String snapshot = locator.ariaSnapshot();
 			return snapshot != null ? snapshot : "";
 		}
+		catch (TimeoutError e) {
+			// Handle timeout gracefully - return error message instead of throwing
+			// exception
+			// This allows the flow to continue without interruption
+			String timeoutMessage = String.format(
+					"ARIA snapshot generation timed out after %dms. The page may be too complex or still loading. "
+							+ "You can continue with the available page information (URL, title, tabs).",
+					options.getTimeout() != null ? options.getTimeout() : 30000);
+			log.warn("ARIA snapshot timeout (non-fatal): {}", e.getMessage());
+			return timeoutMessage;
+		}
 		catch (Exception e) {
-			log.error("Failed to generate ARIA snapshot: {}", e.getMessage(), e);
-			throw new RuntimeException("Failed to generate ARIA snapshot: " + e.getMessage(), e);
+			// For other exceptions, also return error message instead of throwing
+			// This ensures the flow continues even if snapshot generation fails
+			String errorMessage = String.format(
+					"Failed to generate ARIA snapshot: %s. You can continue with the available page information (URL, title, tabs).",
+					e.getMessage());
+			log.warn("ARIA snapshot generation failed (non-fatal): {}", e.getMessage());
+			return errorMessage;
 		}
 	}
 

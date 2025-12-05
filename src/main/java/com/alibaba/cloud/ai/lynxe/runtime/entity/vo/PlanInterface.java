@@ -155,19 +155,6 @@ public interface PlanInterface {
 	public String getPlanTemplateId();
 
 	/**
-	 * Whether it's direct feedback mode. When true, skip complex plan execution and use
-	 * LLM to give response directly
-	 * @return Return true if it's direct feedback mode
-	 */
-	boolean isDirectResponse();
-
-	/**
-	 * Set whether it's direct feedback mode
-	 * @param directResponse Direct feedback mode flag
-	 */
-	void setDirectResponse(boolean directResponse);
-
-	/**
 	 * Update the indices of all steps, starting from 0.
 	 */
 	default void updateStepIndices() {

@@ -15,6 +15,8 @@
  */
 package com.alibaba.cloud.ai.lynxe.tool;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ToolContext;
 
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
@@ -26,6 +28,8 @@ import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
  * @param <I> Tool input type
  */
 public abstract class AbstractBaseTool<I> implements ToolCallBiFunctionDef<I> {
+
+	private static final Logger log = LoggerFactory.getLogger(AbstractBaseTool.class);
 
 	/**
 	 * Current plan ID for the tool execution context
@@ -106,6 +110,36 @@ public abstract class AbstractBaseTool<I> implements ToolCallBiFunctionDef<I> {
 			return description + ". Service group: " + serviceGroup;
 		}
 		return description;
+	}
+
+	/**
+	 * Get the current status string of the tool
+	 * @return Returns a string describing the current status of the tool
+	 */
+	public abstract String getCurrentToolStateString();
+
+	/**
+	 * Get the current tool state string with unified error handling This method wraps
+	 * getCurrentToolStateString() with error handling to ensure exceptions don't
+	 * interrupt the execution flow
+	 * @return Tool state string, or error message if an exception occurs
+	 */
+	public String getCurrentToolStateStringWithErrorHandler() {
+		try {
+			// Call the original getCurrentToolStateString() method
+			String stateString = getCurrentToolStateString();
+			return stateString != null ? stateString : "";
+		}
+		catch (Exception e) {
+			// Handle any exception gracefully - return error message instead of throwing
+			// This ensures the flow continues even if tool state retrieval fails
+			String toolName = getName();
+			String errorMessage = String.format(
+					"Error getting tool state for '%s': %s. You can continue with available information.",
+					toolName != null ? toolName : "unknown tool", e.getMessage());
+			log.warn("Error getting tool state string for tool '{}' (non-fatal): {}", toolName, e.getMessage(), e);
+			return errorMessage;
+		}
 	}
 
 }

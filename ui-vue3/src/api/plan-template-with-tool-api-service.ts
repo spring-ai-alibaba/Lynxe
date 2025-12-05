@@ -163,4 +163,25 @@ export class PlanTemplateApiService {
       throw error
     }
   }
+
+  /**
+   * Generate a new plan template ID from backend
+   * @returns Generated plan template ID
+   */
+  static async generatePlanTemplateId(): Promise<string> {
+    try {
+      const response = await fetch('/api/plan-template/generate-plan-template-id', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const result = await this.handleResponse(response)
+      const data = await result.json()
+      return data.planTemplateId
+    } catch (error) {
+      console.error('Failed to generate plan template ID:', error)
+      throw error
+    }
+  }
 }

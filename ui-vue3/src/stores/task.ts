@@ -16,6 +16,7 @@
 
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useTaskStop } from '@/composables/useTaskStop'
 
 export interface TaskPayload {
   prompt: string
@@ -146,21 +147,13 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   // Stop current running task
+  // Uses shared stop logic from useTaskStop composable
   const stopCurrentTask = async () => {
     console.log('[TaskStore] stopCurrentTask called')
     if (currentTask.value && currentTask.value.isRunning && currentTask.value.planId) {
-      try {
-        const { DirectApiService } = await import('@/api/direct-api-service')
-        await DirectApiService.stopTask(currentTask.value.planId)
-        console.log('[TaskStore] Task stopped successfully')
-
-        // Mark task as no longer running
-        currentTask.value.isRunning = false
-        return true
-      } catch (error) {
-        console.error('[TaskStore] Failed to stop task:', error)
-        return false
-      }
+      // Use shared stop logic from composable
+      const { stopTask } = useTaskStop()
+      return await stopTask(currentTask.value.planId, true)
     }
     return false
   }

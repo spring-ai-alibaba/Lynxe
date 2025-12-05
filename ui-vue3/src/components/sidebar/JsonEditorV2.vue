@@ -960,8 +960,9 @@ const confirmCopyPlan = async () => {
     // Get the current plan config
     const currentConfig = templateConfig.getConfig()
 
-    // Generate a new planTemplateId in the format: planTemplate-{timestamp}
-    const newPlanTemplateId = `planTemplate-${Date.now()}`
+    // Generate a new planTemplateId from backend
+    const newPlanTemplateId = await PlanTemplateApiService.generatePlanTemplateId()
+    console.log('[JsonEditorV2] Generated plan template ID from backend:', newPlanTemplateId)
 
     // Exclude toolConfig from the copy to avoid copying service configuration
     const { toolConfig: _toolConfig, ...configWithoutToolConfig } = currentConfig

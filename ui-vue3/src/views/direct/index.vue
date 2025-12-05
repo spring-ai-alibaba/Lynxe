@@ -118,6 +118,7 @@ import { useToast } from '@/composables/useToast'
 import { memoryStore } from '@/stores/memory'
 import { useTaskStore } from '@/stores/task'
 import { templateStore } from '@/stores/templateStore'
+import type { PlanExecutionRecord } from '@/types/plan-execution-record'
 import { Icon } from '@iconify/vue'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -164,8 +165,14 @@ onMounted(() => {
     records => {
       // Process all records in the map
       for (const [planId, planDetails] of records.entries()) {
+        // Skip completed plans early to avoid unnecessary processing
+        if (planDetails?.completed) {
+          continue
+        }
+
         // Only process if this is the current root plan
-        if (!shouldProcessEventForCurrentPlan(planId)) {
+        // Cast planDetails to mutable type for function parameter
+        if (!shouldProcessEventForCurrentPlan(planId, false, planDetails as PlanExecutionRecord)) {
           continue
         }
 
@@ -443,7 +450,8 @@ const resetSidebarWidth = () => {
 // Helper function to check if the event should be processed for the current plan
 const shouldProcessEventForCurrentPlan = (
   rootPlanId: string,
-  allowSpecialIds: boolean = false
+  allowSpecialIds: boolean = false,
+  planDetails?: PlanExecutionRecord
 ): boolean => {
   // If no current plan is set, allow all events (initial state)
   if (!currentRootPlanId.value) {
@@ -460,7 +468,12 @@ const shouldProcessEventForCurrentPlan = (
     return true
   }
 
-  // Otherwise, ignore the event
+  // If plan is completed, silently ignore without logging
+  if (planDetails?.completed) {
+    return false
+  }
+
+  // Otherwise, ignore the event (only log for active non-current plans)
   console.log(
     '[Direct] Ignoring event for non-current rootPlanId:',
     rootPlanId,

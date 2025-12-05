@@ -38,6 +38,8 @@ import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.ExecutionContext;
 import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.PlanExecutionResult;
 import com.alibaba.cloud.ai.lynxe.runtime.service.TaskInterruptionManager;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Flux;
 
@@ -61,6 +63,8 @@ public class PlanFinalizer {
 
 	private final MemoryService memoryService;
 
+	private final ObjectMapper objectMapper;
+
 	public PlanFinalizer(LlmService llmService, PlanExecutionRecorder recorder, LynxeProperties lynxeProperties,
 			StreamingResponseHandler streamingResponseHandler, TaskInterruptionManager taskInterruptionManager,
 			MemoryService memoryService) {
@@ -70,6 +74,7 @@ public class PlanFinalizer {
 		this.streamingResponseHandler = streamingResponseHandler;
 		this.taskInterruptionManager = taskInterruptionManager;
 		this.memoryService = memoryService;
+		this.objectMapper = new ObjectMapper();
 	}
 
 	/**
@@ -78,6 +83,21 @@ public class PlanFinalizer {
 	private void generateSummary(ExecutionContext context, PlanExecutionResult result) {
 		validateContextWithPlan(context, "ExecutionContext or its plan or title cannot be null");
 
+		// Check if resultStr already contains a message that can be used directly
+		String resultStr = context.getPlan().getResult();
+		String extractedMessage = extractMessageFromJsonIfApplicable(resultStr);
+
+		// If we successfully extracted a message from resultStr, use it directly without
+		// calling LLM
+		// extractedMessage will be non-null and different from resultStr if extraction
+		// succeeded
+		if (extractedMessage != null) {
+			log.debug("Using message from resultStr directly, skipping LLM call");
+			processAndRecordResult(context, result, extractedMessage, "Generated summary: {}");
+			return;
+		}
+
+		// Otherwise, generate summary using LLM
 		Map<String, Object> promptVariables = Map.of("executionDetail",
 				context.getPlan().getPlanExecutionStateStringFormat(false), "title", context.getTitle());
 
@@ -91,28 +111,6 @@ public class PlanFinalizer {
 				Please respond to the user's request based on the information in the execution details.
 				""";
 		generateWithLlm(context, result, summaryPrompt, promptVariables, "summary", "Generated summary: {}");
-	}
-
-	/**
-	 * Generate direct LLM response for simple requests
-	 */
-	private void generateDirectResponse(ExecutionContext context, PlanExecutionResult result) {
-		validateForGeneration(context, "ExecutionContext or title cannot be null");
-
-		String title = context.getTitle();
-		log.info("Generating direct response for user request: {}", title);
-
-		Map<String, Object> promptVariables = Map.of("title", title);
-
-		String directResponsePrompt = """
-				You are lynxe, an AI assistant capable of responding to user requests. Currently in direct feedback mode, you need to directly respond to the user's simple requests without complex planning and decomposition.
-
-				The current user request is:
-
-				{title}
-				""";
-		generateWithLlm(context, result, directResponsePrompt, promptVariables, "direct response",
-				"Generated direct response: {}");
 	}
 
 	/**
@@ -198,13 +196,8 @@ public class PlanFinalizer {
 				log.debug("Generating LLM summary for plan: {}", context.getCurrentPlanId());
 				generateSummary(context, result);
 			}
-			// Check if this is a direct response plan
-			else if (context.getPlan() != null && context.getPlan().isDirectResponse()) {
-				log.debug("Generating direct response for plan: {}", context.getCurrentPlanId());
-				generateDirectResponse(context, result);
-			}
 			else {
-				log.debug("No need to generate summary or direct response for plan: {}", context.getCurrentPlanId());
+				log.debug("No need to generate summary for plan: {}", context.getCurrentPlanId());
 				processAndRecordResult(context, result, result.getFinalResult(), "Final result: {}");
 			}
 
@@ -239,11 +232,58 @@ public class PlanFinalizer {
 		try {
 			String llmResult = generateLlmResponse(context, promptName, variables,
 					Character.toUpperCase(operationType.charAt(0)) + operationType.substring(1) + " generation");
-			processAndRecordResult(context, result, llmResult, successLogTemplate);
+
+			// Try to parse JSON and extract message if output only has message key
+			String processedResult = extractMessageFromJsonIfApplicable(llmResult);
+			processAndRecordResult(context, result, processedResult, successLogTemplate);
 		}
 		catch (Exception e) {
 			handleLlmError(operationType, e);
 		}
+	}
+
+	/**
+	 * Extract message from JSON response if output only contains message key
+	 * @param jsonString The JSON string to parse (may be JSON or plain text)
+	 * @return Extracted message if applicable, null if extraction failed or doesn't match
+	 * expected structure
+	 */
+	private String extractMessageFromJsonIfApplicable(String jsonString) {
+		if (jsonString == null || jsonString.trim().isEmpty()) {
+			return null;
+		}
+
+		try {
+			// Try to parse as JSON
+			JsonNode rootNode = objectMapper.readTree(jsonString);
+
+			// Check if it has "output" key
+			if (rootNode.has("output") && rootNode.get("output").isObject()) {
+				JsonNode outputNode = rootNode.get("output");
+
+				// Get all keys in output
+				java.util.Iterator<String> fieldNames = outputNode.fieldNames();
+				java.util.List<String> keys = new java.util.ArrayList<>();
+				fieldNames.forEachRemaining(keys::add);
+
+				// If output only has one key named "message", extract it
+				if (keys.size() == 1 && keys.contains("message")) {
+					JsonNode messageNode = outputNode.get("message");
+					if (messageNode != null && messageNode.isTextual()) {
+						String message = messageNode.asText();
+						log.debug("Extracted message from JSON output: {}", message);
+						return message;
+					}
+				}
+			}
+		}
+		catch (Exception e) {
+			// Not valid JSON or doesn't match expected structure
+			log.debug("String is not JSON or doesn't match expected structure: {}", e.getMessage());
+		}
+
+		// Return null if extraction failed (to indicate we should use original logic)
+		return null;
 	}
 
 	/**
@@ -255,18 +295,6 @@ public class PlanFinalizer {
 		result.setFinalResult(llmResult);
 		recordPlanCompletion(context, llmResult);
 		log.info(logTemplate, llmResult);
-	}
-
-	/**
-	 * Unified validation for generation methods
-	 */
-	private void validateForGeneration(ExecutionContext context, String errorMessage) {
-		if (context == null) {
-			throw new IllegalArgumentException(errorMessage);
-		}
-		if (context.getTitle() == null) {
-			throw new IllegalArgumentException("Title cannot be null");
-		}
 	}
 
 	/**

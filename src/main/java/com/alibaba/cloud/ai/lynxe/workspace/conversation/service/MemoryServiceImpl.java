@@ -201,4 +201,80 @@ public class MemoryServiceImpl implements MemoryService {
 		}
 	}
 
+	@Override
+	public void addChatToConversation(String conversationId, String chatId, String memoryName) {
+		if (conversationId == null || conversationId.trim().isEmpty()) {
+			logger.warn("Cannot add chat to null or empty conversationId");
+			return;
+		}
+
+		if (chatId == null || chatId.trim().isEmpty()) {
+			logger.warn("Cannot add null or empty chatId to conversation {}", conversationId);
+			return;
+		}
+
+		try {
+			MemoryEntity memoryEntity = memoryRepository.findByConversationId(conversationId);
+			if (memoryEntity == null) {
+				// Create new memory with provided memory name
+				String finalMemoryName = (memoryName != null && !memoryName.trim().isEmpty())
+						? sanitizeMemoryName(memoryName) : "Chat Conversation";
+				logger.info("Creating new memory for conversationId: {} with chatId: {} and memoryName: {}",
+						conversationId, chatId, finalMemoryName);
+				memoryEntity = new MemoryEntity(conversationId, finalMemoryName);
+			}
+			else {
+				// Update memory name if provided and different from current
+				if (memoryName != null && !memoryName.trim().isEmpty()) {
+					String sanitizedMemoryName = sanitizeMemoryName(memoryName);
+					if (!sanitizedMemoryName.equals(memoryEntity.getMemoryName())) {
+						logger.debug("Updating memory name from '{}' to '{}' for conversationId: {}",
+								memoryEntity.getMemoryName(), sanitizedMemoryName, conversationId);
+						memoryEntity.setMemoryName(sanitizedMemoryName);
+					}
+				}
+			}
+
+			// Add the chat ID (similar to rootPlanId for plan execution)
+			memoryEntity.addRootPlanId(chatId);
+			memoryRepository.save(memoryEntity);
+
+			logger.info("Added chatId {} to conversation {} with memoryName: {}", chatId, conversationId,
+					memoryEntity.getMemoryName());
+		}
+		catch (Exception e) {
+			logger.error("Failed to add chatId {} to conversation {}", chatId, conversationId, e);
+		}
+	}
+
+	/**
+	 * Sanitize memory name to ensure it's suitable for display Limits length and removes
+	 * problematic characters
+	 * @param memoryName The original memory name
+	 * @return Sanitized memory name
+	 */
+	private String sanitizeMemoryName(String memoryName) {
+		if (memoryName == null || memoryName.trim().isEmpty()) {
+			return "Chat Conversation";
+		}
+
+		// Remove leading/trailing whitespace
+		String sanitized = memoryName.trim();
+
+		// Limit length to avoid UI issues
+		if (sanitized.length() > 100) {
+			sanitized = sanitized.substring(0, 100) + "...";
+		}
+
+		// Remove newlines and excessive whitespace
+		sanitized = sanitized.replaceAll("\\s+", " ").trim();
+
+		// Ensure it's not empty after sanitization
+		if (sanitized.isEmpty()) {
+			return "Chat Conversation";
+		}
+
+		return sanitized;
+	}
+
 }

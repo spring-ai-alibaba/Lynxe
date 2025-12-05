@@ -89,9 +89,18 @@ public class AriaElementHelper {
 				options = new AriaSnapshotOptions().setSelector("body").setTimeout(30000);
 			}
 
-			// Generate ARIA snapshot
+			// Generate ARIA snapshot (now returns error message string on timeout instead
+			// of throwing)
 			String snapshot = AriaSnapshot.ariaSnapshot(page, options);
 			if (snapshot != null && !snapshot.isEmpty()) {
+				// Check if snapshot is an error message (contains timeout or error
+				// keywords)
+				// If it's an error message, return it directly without processing
+				if (snapshot.contains("timed out") || snapshot.contains("Failed to generate ARIA snapshot")) {
+					log.debug("ARIA snapshot returned error message, returning as-is");
+					return snapshot;
+				}
+
 				// Replace aria-id-num with [idx=num] in the snapshot text
 				String processedSnapshot = replaceAriaIdWithIdx(snapshot);
 
@@ -111,7 +120,12 @@ public class AriaElementHelper {
 			}
 		}
 		catch (Exception e) {
+			// This catch block should rarely be hit now since AriaSnapshot returns error
+			// messages
+			// instead of throwing exceptions, but keep it for safety
 			log.warn("Failed to parse page and assign refs: {}", e.getMessage());
+			return String.format("Error parsing page: %s. You can continue with available page information.",
+					e.getMessage());
 		}
 
 		return null;

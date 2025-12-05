@@ -174,21 +174,6 @@ public abstract class AbstractExecutionPlan implements PlanInterface {
 		executionParams = "";
 	}
 
-	/**
-	 * Whether it's direct feedback mode
-	 */
-	protected boolean directResponse = false;
-
-	@Override
-	public boolean isDirectResponse() {
-		return directResponse;
-	}
-
-	@Override
-	public void setDirectResponse(boolean directResponse) {
-		this.directResponse = directResponse;
-	}
-
 	public String getPlanTemplateId() {
 		return planTemplateId;
 	}

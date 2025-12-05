@@ -15,6 +15,7 @@
  */
 
 import { CommonApiService } from '@/api/common-api-service'
+import { useFileUploadSingleton } from '@/composables/useFileUpload'
 import { useTaskStore } from '@/stores/task'
 import type { PlanExecutionRecord } from '@/types/plan-execution-record'
 import { reactive, readonly, ref } from 'vue'
@@ -219,6 +220,11 @@ export function usePlanExecution() {
             hasSummary: !!hasSummary,
             pollCount: currentPollCount,
           })
+
+          // Clear uploaded files after successful execution (similar to execution state management)
+          const fileUpload = useFileUploadSingleton()
+          fileUpload.clearFiles()
+          console.log(`[usePlanExecution] Cleared uploaded files after execution completion`)
 
           // Delete execution details from backend
           try {

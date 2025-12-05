@@ -1440,8 +1440,12 @@ public class DynamicAgent extends ReActAgent {
 
 		ToolCallBackContext context = toolCallBackContext.get(lookupKey);
 		if (context != null) {
-			String envData = context.getFunctionInstance().getCurrentToolStateString();
-			return envData;
+			ToolCallBiFunctionDef<?> functionInstance = context.getFunctionInstance();
+			// Use getCurrentToolStateStringWithErrorHandler which provides unified error
+			// handling
+			// This method is available as a default method in the interface
+			String envData = functionInstance.getCurrentToolStateStringWithErrorHandler();
+			return envData != null ? envData : "";
 		}
 		// If corresponding tool callback context is not found, return empty string
 		log.warn("⚠️ No context found for tool: {} (lookup key: {})", toolCallName, lookupKey);

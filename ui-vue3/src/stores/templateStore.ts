@@ -176,20 +176,41 @@ export class TemplateStore {
   }
 
   async createNewTemplate(planType: string) {
-    const emptyTemplate: PlanTemplateConfigVO = {
-      planTemplateId: `new-${Date.now()}`,
-      title: i18n.global.t('sidebar.newTemplateName'),
-      planType: planType,
-      createTime: new Date().toISOString(),
-      updateTime: new Date().toISOString(),
+    try {
+      // Generate plan template ID from backend
+      const planTemplateId = await PlanTemplateApiService.generatePlanTemplateId()
+      console.log('[TemplateStore] Generated plan template ID from backend:', planTemplateId)
+
+      const emptyTemplate: PlanTemplateConfigVO = {
+        planTemplateId: planTemplateId,
+        title: i18n.global.t('sidebar.newTemplateName'),
+        planType: planType,
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+      }
+      this.templateConfig.selectedTemplate.value = emptyTemplate
+      this.templateConfig.currentPlanTemplateId.value = null
+
+      // Reset modification flag for new template
+      this.hasTaskRequirementModified = false
+
+      console.log('[TemplateStore] Created new empty plan template')
+    } catch (error) {
+      console.error('[TemplateStore] Failed to generate plan template ID:', error)
+      // Fallback to timestamp-based ID if backend call fails
+      const fallbackId = `planTemplate-${Date.now()}`
+      console.warn('[TemplateStore] Using fallback plan template ID:', fallbackId)
+      const emptyTemplate: PlanTemplateConfigVO = {
+        planTemplateId: fallbackId,
+        title: i18n.global.t('sidebar.newTemplateName'),
+        planType: planType,
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+      }
+      this.templateConfig.selectedTemplate.value = emptyTemplate
+      this.templateConfig.currentPlanTemplateId.value = null
+      this.hasTaskRequirementModified = false
     }
-    this.templateConfig.selectedTemplate.value = emptyTemplate
-    this.templateConfig.currentPlanTemplateId.value = null
-
-    // Reset modification flag for new template
-    this.hasTaskRequirementModified = false
-
-    console.log('[TemplateStore] Created new empty plan template')
   }
 
   async deleteTemplate(template: PlanTemplateConfigVO) {

@@ -33,7 +33,6 @@ export function usePlanTemplateConfig() {
   const config = reactive<PlanTemplateConfigVO>({
     title: '',
     steps: [],
-    directResponse: false,
     planType: 'dynamic_agent',
     planTemplateId: '',
     accessLevel: 'editable',
@@ -149,7 +148,6 @@ export function usePlanTemplateConfig() {
         ...step,
         selectedToolKeys: step.selectedToolKeys ?? [],
       })),
-      directResponse: newConfig.directResponse || false,
       planType: newConfig.planType || 'dynamic_agent',
       planTemplateId: newConfig.planTemplateId || '',
       accessLevel: accessLevel,
@@ -172,7 +170,6 @@ export function usePlanTemplateConfig() {
     Object.assign(config, {
       title: '',
       steps: [],
-      directResponse: false,
       planType: 'dynamic_agent',
       planTemplateId: '',
       accessLevel: 'editable',
@@ -203,7 +200,6 @@ export function usePlanTemplateConfig() {
         // Ensure selectedToolKeys is always an array, not null
         selectedToolKeys: step.selectedToolKeys ?? [],
       })),
-      directResponse: config.directResponse || false,
       planType: config.planType || 'dynamic_agent',
       planTemplateId: config.planTemplateId || '',
       accessLevel: accessLevel,
@@ -349,29 +345,63 @@ export function usePlanTemplateConfig() {
       const result = await PlanTemplateApiService.createOrUpdatePlanTemplateWithTool(getConfig())
 
       if (result.success) {
+        // Use the planTemplateId from backend response (may be different if frontend sent "new-xxx")
+        const actualPlanTemplateId = result.planTemplateId || config.planTemplateId
+
+        // Update local config with the actual planTemplateId from backend
+        if (actualPlanTemplateId && actualPlanTemplateId !== config.planTemplateId) {
+          console.log(
+            '[usePlanTemplateConfig] PlanTemplateId replaced by backend:',
+            config.planTemplateId,
+            '->',
+            actualPlanTemplateId
+          )
+          config.planTemplateId = actualPlanTemplateId
+        }
+
         // Reload the template to get updated data from backend
-        const planTemplateId = config.planTemplateId
-        if (planTemplateId) {
-          await load(planTemplateId)
+        if (actualPlanTemplateId) {
+          await load(actualPlanTemplateId)
 
           // Update selectedTemplate if it matches the saved template
-          if (selectedTemplate.value?.planTemplateId === planTemplateId) {
+          // Check both old and new planTemplateId to handle ID replacement
+          const oldPlanTemplateId = selectedTemplate.value?.planTemplateId
+          if (
+            oldPlanTemplateId === actualPlanTemplateId ||
+            oldPlanTemplateId === config.planTemplateId
+          ) {
             const loadedConfig = getConfig()
             selectedTemplate.value = {
               ...selectedTemplate.value,
               ...loadedConfig,
+              planTemplateId: actualPlanTemplateId, // Ensure using the actual ID
             }
           }
 
           // Update planTemplateList if the template exists in the list
+          // Check both old and new planTemplateId
           const templateIndex = planTemplateList.value.findIndex(
-            t => t.planTemplateId === planTemplateId
+            t => t.planTemplateId === actualPlanTemplateId || t.planTemplateId === oldPlanTemplateId
           )
           if (templateIndex >= 0) {
             const loadedConfig = getConfig()
             planTemplateList.value[templateIndex] = {
               ...planTemplateList.value[templateIndex],
               ...loadedConfig,
+              planTemplateId: actualPlanTemplateId, // Ensure using the actual ID
+            }
+          } else if (oldPlanTemplateId) {
+            // If template was not found in list but we have old ID, try to find and update it
+            const oldTemplateIndex = planTemplateList.value.findIndex(
+              t => t.planTemplateId === oldPlanTemplateId
+            )
+            if (oldTemplateIndex >= 0) {
+              const loadedConfig = getConfig()
+              planTemplateList.value[oldTemplateIndex] = {
+                ...planTemplateList.value[oldTemplateIndex],
+                ...loadedConfig,
+                planTemplateId: actualPlanTemplateId, // Update to new ID
+              }
             }
           }
         }

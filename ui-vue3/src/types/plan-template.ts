@@ -78,7 +78,6 @@ export interface StepConfig {
 export interface PlanTemplateConfigVO {
   title?: string
   steps?: StepConfig[]
-  directResponse?: boolean
   planType?: string
   planTemplateId?: string
   accessLevel?: string
