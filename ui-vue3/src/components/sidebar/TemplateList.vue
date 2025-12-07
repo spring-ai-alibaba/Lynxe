@@ -383,7 +383,7 @@ onMounted(async () => {
 // Check if template version is outdated
 const isVersionOutdated = (template: PlanTemplateConfigVO): boolean => {
   if (!template.version || currentSystemVersion.value === 'unknown') {
-    return false
+    return true
   }
   return checkVersionOutdated(template.version, currentSystemVersion.value)
 }

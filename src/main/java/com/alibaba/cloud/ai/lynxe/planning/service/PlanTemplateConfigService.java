@@ -878,6 +878,7 @@ public class PlanTemplateConfigService {
 				configVO.setPlanTemplateId(entity.getPlanTemplateId());
 				configVO.setTitle(entity.getToolName());
 				configVO.setServiceGroup(entity.getServiceGroup());
+				configVO.setVersion(entity.getVersion());
 				PlanTemplateAccessLevel entityAccessLevel = entity.getAccessLevel();
 				if (entityAccessLevel != null) {
 					configVO.setAccessLevel(entityAccessLevel);

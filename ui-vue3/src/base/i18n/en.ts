@@ -833,7 +833,8 @@ const words: I18nType = {
       'Are you sure you want to delete plan template "{templateName}"? This action cannot be undone.',
     deleteSuccess: 'Plan template deleted successfully',
     deleteFailed: 'Failed to delete plan template',
-    versionOutdated: 'Version outdated - please update',
+    versionOutdated:
+      'Function version is old, check if it is still usable, clicking save on the function can remove this warning',
     jsonTemplate: 'Func-Agent Plan Template Editor',
     rollback: 'Rollback',
     restore: 'Restore',
