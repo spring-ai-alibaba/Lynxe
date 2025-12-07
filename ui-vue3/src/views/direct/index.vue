@@ -161,10 +161,10 @@ onMounted(() => {
 
   // Watch for plan execution record changes (reactive approach)
   watch(
-    () => planExecution.planExecutionRecords,
+    () => planExecution.planExecutionRecords.value,
     records => {
-      // Process all records in the map
-      for (const [planId, planDetails] of records.entries()) {
+      // Process all records in the object
+      for (const [planId, planDetails] of Object.entries(records)) {
         // Skip completed plans early to avoid unnecessary processing
         if (planDetails?.completed) {
           continue
@@ -188,7 +188,7 @@ onMounted(() => {
         // and ALL plans are completed
         if (planDetails.completed && planId === currentRootPlanId.value) {
           // Check if there are any other running plans
-          const recordsArray = Array.from(records.entries())
+          const recordsArray = Object.entries(records)
           const hasOtherRunningPlans = recordsArray.some(
             ([otherPlanId, otherPlanDetails]) =>
               otherPlanId !== planId &&

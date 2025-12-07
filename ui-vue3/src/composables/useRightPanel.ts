@@ -67,7 +67,7 @@ export function useRightPanel() {
     if (!stepId) return null
 
     // Search through all plan execution records
-    for (const [planId, record] of planExecution.planExecutionRecords.entries()) {
+    for (const [planId, record] of Object.entries(planExecution.planExecutionRecords.value)) {
       // Check if this record's rootPlanId or currentPlanId matches
       const recordKey = record.rootPlanId || record.currentPlanId
       if (!recordKey) continue
