@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Version service for managing application version information
- * Provides version information extracted from version.properties file
+ * Version service for managing application version information Provides version
+ * information extracted from version.properties file
  */
 @Service
 public class VersionService {
@@ -50,8 +50,8 @@ public class VersionService {
 	}
 
 	/**
-	 * Load version information from version.properties file
-	 * The file is automatically generated during Maven build with version from pom.xml
+	 * Load version information from version.properties file The file is automatically
+	 * generated during Maven build with version from pom.xml
 	 */
 	private void loadVersionInfo() {
 		try (InputStream inputStream = getClass().getResourceAsStream(VERSION_PROPERTIES)) {
@@ -75,4 +75,3 @@ public class VersionService {
 	}
 
 }
-
