@@ -886,6 +886,10 @@ export function useMessageDialog() {
    * Processes all dialogs with planIds, not just active one
    */
   watchEffect(() => {
+    // Access version counter first to ensure watchEffect tracks Map updates
+    // This forces reactivity when planExecutionRecordsVersion changes
+    const version = planExecution.planExecutionRecordsVersion?.value ?? 0
+
     const records = planExecution.planExecutionRecords
 
     // Force reactivity by accessing the Map size - this ensures watchEffect tracks Map changes

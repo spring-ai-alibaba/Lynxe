@@ -107,7 +107,7 @@ public class DatabaseSqlGenerator {
 	private static String generateMysqlTableInfoSql(boolean fuzzy, String fuzzyText) {
 		if (fuzzy) {
 			return "SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES "
-					+ "WHERE TABLE_COMMENT LIKE ? AND table_schema NOT IN ('sys','mysql','performance_schema','information_schema')";
+					+ "WHERE (TABLE_NAME LIKE ? OR TABLE_COMMENT LIKE ?) AND table_schema NOT IN ('sys','mysql','performance_schema','information_schema')";
 		}
 		else {
 			return "SELECT TABLE_NAME, TABLE_COMMENT FROM information_schema.TABLES "

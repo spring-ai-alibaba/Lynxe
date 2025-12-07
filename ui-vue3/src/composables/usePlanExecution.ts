@@ -46,6 +46,10 @@ export function usePlanExecution() {
   // This is the main reactive state that components watch
   const planExecutionRecords = reactive(new Map<string, PlanExecutionRecord>())
 
+  // Version counter to force reactivity updates
+  // Incrementing this ref ensures watchEffect tracks Map changes even when same key is updated
+  const planExecutionRecordsVersion = ref(0)
+
   // Polling state
   const isPolling = ref(false)
   const pollTimer = ref<number | null>(null)
@@ -174,14 +178,26 @@ export function usePlanExecution() {
 
       // Update reactive map - this will trigger watchers in components
       // Always use recordKey (rootPlanId or currentPlanId) as the map key
+      // FIX: Delete and re-set to ensure Vue reactivity tracking
+      // Vue 3 may not detect Map.set() updates to the same key, so we delete first
+      if (planExecutionRecords.has(recordKey)) {
+        planExecutionRecords.delete(recordKey)
+      }
       planExecutionRecords.set(recordKey, details)
 
       // If the passed planId is different from recordKey, also store it with the passed planId
       // This handles cases where the API returns a different planId than what was requested
       if (planId !== recordKey) {
+        if (planExecutionRecords.has(planId)) {
+          planExecutionRecords.delete(planId)
+        }
         planExecutionRecords.set(planId, details)
         console.log('[usePlanExecution] Stored record with both keys:', { planId, recordKey })
       }
+
+      // Force reactivity update by incrementing version counter
+      // This ensures watchEffect in useMessageDialog tracks the Map changes
+      planExecutionRecordsVersion.value++
 
       console.log('[usePlanExecution] Updated plan execution record:', {
         planId,
@@ -394,12 +410,14 @@ export function usePlanExecution() {
     planPollAttempts.clear()
     planRetryAttempts.clear()
     planExecutionRecords.clear()
+    planExecutionRecordsVersion.value = 0
     isPolling.value = false
   }
 
   return {
     // Reactive state - components can watch this
     planExecutionRecords: readonly(planExecutionRecords),
+    planExecutionRecordsVersion: readonly(planExecutionRecordsVersion),
     trackedPlanIds: readonly(trackedPlanIds),
     isPolling: readonly(isPolling),
 
