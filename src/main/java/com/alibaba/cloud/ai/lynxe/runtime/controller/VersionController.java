@@ -17,7 +17,9 @@ package com.alibaba.cloud.ai.lynxe.runtime.controller;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,7 +68,9 @@ public class VersionController {
 		}
 
 		versionInfo.put("version", cachedVersion != null ? cachedVersion : DEFAULT_VERSION);
-		versionInfo.put("buildTime", cachedBuildTime != null ? cachedBuildTime : DEFAULT_BUILD_TIME);
+		// Format build time to readable format (convert from ISO format if needed)
+		String formattedBuildTime = formatBuildTime(cachedBuildTime);
+		versionInfo.put("buildTime", formattedBuildTime);
 		versionInfo.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 
 		return ResponseEntity.ok(versionInfo);
@@ -97,6 +101,33 @@ public class VersionController {
 			logger.error("Failed to load version information from {}", VERSION_PROPERTIES, e);
 			cachedVersion = DEFAULT_VERSION;
 			cachedBuildTime = DEFAULT_BUILD_TIME;
+		}
+	}
+
+	/**
+	 * Format build time to readable format
+	 * Converts ISO format (2025-12-07T15:14:10Z) to readable format (2025-12-07 15:14:10)
+	 * @param buildTime Build time string (may be in ISO format)
+	 * @return Formatted build time string
+	 */
+	private String formatBuildTime(String buildTime) {
+		if (buildTime == null || buildTime.equals(DEFAULT_BUILD_TIME)) {
+			return DEFAULT_BUILD_TIME;
+		}
+
+		try {
+			// Try to parse ISO format (e.g., 2025-12-07T15:14:10Z)
+			if (buildTime.contains("T") && buildTime.contains("Z")) {
+				Instant instant = Instant.parse(buildTime);
+				LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+				return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+			}
+			// If already in readable format, return as is
+			return buildTime;
+		}
+		catch (Exception e) {
+			logger.debug("Failed to format build time '{}', using original value", buildTime);
+			return buildTime;
 		}
 	}
 

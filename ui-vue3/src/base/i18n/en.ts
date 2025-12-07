@@ -498,6 +498,12 @@ const words: I18nType = {
         imageType: 'Image Type',
         maxRetryAttempts: 'Max Retry Attempts',
       },
+      versionInfo: {
+        title: 'Version Information',
+        version: 'Version',
+        buildTime: 'Build Time',
+        currentTime: 'Current Time',
+      },
       systemSettings: {
         systemName: 'System Name',
         language: 'Language',

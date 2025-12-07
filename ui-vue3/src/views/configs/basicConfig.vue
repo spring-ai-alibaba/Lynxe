@@ -315,6 +315,30 @@
       <p>{{ $t('config.notFound') }}</p>
     </div>
 
+    <!-- Version Information Section -->
+    <div class="version-info-section">
+      <div class="version-info-card">
+        <div class="version-header">
+          <span class="version-icon">ℹ️</span>
+          <h3 class="version-title">{{ $t('config.versionInfo.title') }}</h3>
+        </div>
+        <div class="version-content">
+          <div class="version-item" v-if="versionInfo.version">
+            <span class="version-label">{{ $t('config.versionInfo.version') }}:</span>
+            <span class="version-value">{{ versionInfo.version }}</span>
+          </div>
+          <div class="version-item" v-if="versionInfo.buildTime">
+            <span class="version-label">{{ $t('config.versionInfo.buildTime') }}:</span>
+            <span class="version-value">{{ versionInfo.buildTime }}</span>
+          </div>
+          <div class="version-item" v-if="versionInfo.timestamp">
+            <span class="version-label">{{ $t('config.versionInfo.currentTime') }}:</span>
+            <span class="version-value">{{ formatTimestamp(versionInfo.timestamp) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Message Prompt -->
     <transition name="message-fade">
       <div v-if="message.show" :class="['message-toast', message.type]">
@@ -326,6 +350,7 @@
 
 <script setup lang="ts">
 import { AdminApiService, type ConfigItem } from '@/api/admin-api-service'
+import { CommonApiService } from '@/api/common-api-service'
 import Switch from '@/components/switch/index.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -372,6 +397,13 @@ const message = reactive({
 
 // Search filter state
 const searchQuery = ref('')
+
+// Version information
+const versionInfo = ref<{ version: string; buildTime: string; timestamp: string }>({
+  version: '',
+  buildTime: '',
+  timestamp: '',
+})
 
 // Configuration item display name mapping
 const CONFIG_DISPLAY_NAMES: Record<string, string> = {
@@ -892,9 +924,37 @@ const restoreAllDefaults = async () => {
   }
 }
 
+// Load version information
+const loadVersionInfo = async () => {
+  try {
+    const info = await CommonApiService.getVersion()
+    versionInfo.value = info
+  } catch (error) {
+    console.error('Failed to load version information:', error)
+  }
+}
+
+// Format timestamp to readable format
+const formatTimestamp = (timestamp: string): string => {
+  try {
+    const date = new Date(timestamp)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  } catch {
+    return timestamp
+  }
+}
+
 // Load configurations when the component is mounted
 onMounted(() => {
   loadAllConfigs()
+  loadVersionInfo()
 })
 </script>
 
@@ -1441,5 +1501,73 @@ onMounted(() => {
 .action-btn.restore-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Version Information Section */
+.version-info-section {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-info-card {
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.version-info-card:hover {
+  background: rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.version-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.version-icon {
+  font-size: 20px;
+}
+
+.version-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.version-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.version-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.version-label {
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 120px;
+  font-weight: 500;
+}
+
+.version-value {
+  color: rgba(255, 255, 255, 0.9);
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
 }
 </style>

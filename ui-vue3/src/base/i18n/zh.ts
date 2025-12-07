@@ -483,6 +483,12 @@ const words: I18nType = {
         imageType: '图像类型',
         maxRetryAttempts: '最大重试次数',
       },
+      versionInfo: {
+        title: '版本信息',
+        version: '版本号',
+        buildTime: '构建时间',
+        currentTime: '当前时间',
+      },
       systemSettings: {
         systemName: '系统名称',
         language: '语言',
