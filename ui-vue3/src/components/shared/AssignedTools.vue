@@ -124,7 +124,7 @@ const getToolDisplayNameWithGroup = (toolId: string): string => {
   if (!tool) return toolId
 
   const group = tool.serviceGroup || 'Ungrouped'
-  return `${group}.${tool.name}`
+  return `${group}_${tool.name}`
 }
 
 const getToolDescription = (toolId: string): string => {

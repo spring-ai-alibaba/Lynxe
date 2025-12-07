@@ -62,20 +62,20 @@ public class ParallelExecutionService {
 
 	/**
 	 * Look up tool context using qualified key conversion This method handles the
-	 * conversion from raw tool name to qualified key format (toolName*index*) based on
-	 * serviceGroup, and provides fallback to original toolName if conversion fails.
+	 * conversion from raw tool name to qualified key format (serviceGroup_toolName) based
+	 * on serviceGroup, and provides fallback to original toolName if conversion fails.
 	 * @param toolName The raw tool name to look up
 	 * @param toolCallbackMap Map of tool callbacks
 	 * @return ToolCallBackContext if found, null otherwise
 	 */
 	public ToolCallBackContext lookupToolContext(String toolName, Map<String, ToolCallBackContext> toolCallbackMap) {
-		// Convert tool name to qualified key format (toolName*index*) if needed
+		// Convert tool name to qualified key format (serviceGroup_toolName) if needed
 		// This handles the case where tools are registered with qualified keys based on
 		// serviceGroup
 		String lookupKey = toolName;
 		if (serviceGroupIndexService != null) {
 			try {
-				String convertedKey = serviceGroupIndexService.convertToolKeyToQualifiedKey(toolName);
+				String convertedKey = serviceGroupIndexService.constructFrontendToolKey(toolName);
 				if (convertedKey != null && !convertedKey.equals(toolName)) {
 					lookupKey = convertedKey;
 					logger.debug("Converted tool key from '{}' to '{}' for lookup", toolName, lookupKey);
