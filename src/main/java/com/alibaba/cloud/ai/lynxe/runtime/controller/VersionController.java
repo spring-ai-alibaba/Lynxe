@@ -105,8 +105,8 @@ public class VersionController {
 	}
 
 	/**
-	 * Format build time to readable format
-	 * Converts ISO format (2025-12-07T15:14:10Z) to readable format (2025-12-07 15:14:10)
+	 * Format build time to readable format Converts ISO format (2025-12-07T15:14:10Z) to
+	 * readable format (2025-12-07 15:14:10)
 	 * @param buildTime Build time string (may be in ISO format)
 	 * @return Formatted build time string
 	 */
