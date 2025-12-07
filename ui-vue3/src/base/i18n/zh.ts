@@ -783,6 +783,7 @@ const words: I18nType = {
     deleteConfirmMessage: '确定要删除计划模板 "{templateName}" 吗？此操作不可恢复。',
     deleteSuccess: '计划模板删除成功',
     deleteFailed: '删除计划模板失败',
+    versionOutdated: '版本过旧 - 请更新',
     jsonTemplate: 'Func-Agent计划模板编辑器',
     rollback: '回滚',
     restore: '恢复',

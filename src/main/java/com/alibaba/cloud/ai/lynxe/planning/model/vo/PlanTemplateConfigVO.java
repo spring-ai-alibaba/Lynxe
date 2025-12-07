@@ -53,6 +53,8 @@ public class PlanTemplateConfigVO {
 
 	private String updateTime;
 
+	private String version;
+
 	/**
 	 * Default constructor
 	 */
@@ -175,6 +177,14 @@ public class PlanTemplateConfigVO {
 
 	public void setUpdateTime(String updateTime) {
 		this.updateTime = updateTime;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	/**

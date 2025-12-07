@@ -33,6 +33,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.cloud.ai.lynxe.runtime.service.VersionService;
+
 /**
  * Version information controller Provides version information API for both frontend and
  * backend
@@ -46,13 +48,15 @@ public class VersionController {
 
 	private static final String VERSION_PROPERTIES = "/version.properties";
 
-	private static final String DEFAULT_VERSION = "unknown";
-
 	private static final String DEFAULT_BUILD_TIME = "unknown";
 
-	private String cachedVersion = null;
+	private final VersionService versionService;
 
 	private String cachedBuildTime = null;
+
+	public VersionController(VersionService versionService) {
+		this.versionService = versionService;
+	}
 
 	/**
 	 * Get version information
@@ -62,12 +66,13 @@ public class VersionController {
 	public ResponseEntity<Map<String, Object>> getVersion() {
 		Map<String, Object> versionInfo = new HashMap<>();
 
-		// Load version information (with caching)
-		if (cachedVersion == null || cachedBuildTime == null) {
-			loadVersionInfo();
+		// Load build time information (with caching)
+		if (cachedBuildTime == null) {
+			loadBuildTimeInfo();
 		}
 
-		versionInfo.put("version", cachedVersion != null ? cachedVersion : DEFAULT_VERSION);
+		// Get version from VersionService
+		versionInfo.put("version", versionService.getCurrentVersion());
 		// Format build time to readable format (convert from ISO format if needed)
 		String formattedBuildTime = formatBuildTime(cachedBuildTime);
 		versionInfo.put("buildTime", formattedBuildTime);
@@ -77,14 +82,13 @@ public class VersionController {
 	}
 
 	/**
-	 * Load version information from version.properties file The file is automatically
+	 * Load build time information from version.properties file The file is automatically
 	 * generated during Maven build with version from pom.xml
 	 */
-	private void loadVersionInfo() {
+	private void loadBuildTimeInfo() {
 		try (InputStream inputStream = getClass().getResourceAsStream(VERSION_PROPERTIES)) {
 			if (inputStream == null) {
-				logger.warn("Version properties file not found: {}. Using default values.", VERSION_PROPERTIES);
-				cachedVersion = DEFAULT_VERSION;
+				logger.warn("Version properties file not found: {}. Using default build time.", VERSION_PROPERTIES);
 				cachedBuildTime = DEFAULT_BUILD_TIME;
 				return;
 			}
@@ -92,14 +96,12 @@ public class VersionController {
 			Properties properties = new Properties();
 			properties.load(inputStream);
 
-			cachedVersion = properties.getProperty("version", DEFAULT_VERSION);
 			cachedBuildTime = properties.getProperty("build.time", DEFAULT_BUILD_TIME);
 
-			logger.info("Loaded version information - Version: {}, Build Time: {}", cachedVersion, cachedBuildTime);
+			logger.debug("Loaded build time information - Build Time: {}", cachedBuildTime);
 		}
 		catch (IOException e) {
-			logger.error("Failed to load version information from {}", VERSION_PROPERTIES, e);
-			cachedVersion = DEFAULT_VERSION;
+			logger.error("Failed to load build time information from {}", VERSION_PROPERTIES, e);
 			cachedBuildTime = DEFAULT_BUILD_TIME;
 		}
 	}

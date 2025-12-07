@@ -80,6 +80,9 @@ public class FuncAgentToolEntity {
 	@Column(name = "update_time", nullable = false)
 	private LocalDateTime updateTime;
 
+	@Column(name = "version", length = 50)
+	private String version;
+
 	public FuncAgentToolEntity() {
 		this.createTime = LocalDateTime.now();
 		this.updateTime = LocalDateTime.now();
@@ -203,6 +206,14 @@ public class FuncAgentToolEntity {
 		this.accessLevel = PlanTemplateAccessLevel.fromValue(accessLevelString);
 	}
 
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
+	}
+
 	/**
 	 * Automatically set update time when updating
 	 */
@@ -217,8 +228,8 @@ public class FuncAgentToolEntity {
 				+ toolName + '\'' + ", toolDescription='" + toolDescription + '\'' + ", enableInternalToolcall="
 				+ enableInternalToolcall + ", enableHttpService=" + enableHttpService + ", enableInConversation="
 				+ enableInConversation + ", enableMcpService=" + enableMcpService + ", serviceGroup='" + serviceGroup
-				+ '\'' + ", accessLevel=" + accessLevel + ", createTime=" + createTime + ", updateTime=" + updateTime
-				+ '}';
+				+ '\'' + ", accessLevel=" + accessLevel + ", version='" + version + '\'' + ", createTime=" + createTime
+				+ ", updateTime=" + updateTime + '}';
 	}
 
 }
