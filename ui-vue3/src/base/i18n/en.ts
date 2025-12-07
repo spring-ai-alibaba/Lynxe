@@ -1280,6 +1280,8 @@ const words: I18nType = {
     },
     // Default step title
     defaultStepTitle: 'Step {number}',
+    copyToClipboard: 'Copy to clipboard',
+    copySuccess: 'Copied to clipboard',
   },
 
   // Cron Task
@@ -1339,6 +1341,8 @@ const words: I18nType = {
     httpEndpointDescription:
       'HTTP POST service endpoint address for calling this function via HTTP interface',
     copy: 'Copy',
+    copyToClipboard: 'Copy to clipboard',
+    copySuccess: 'Copied to clipboard',
     copyFailed: 'Copy failed',
     selectEndpoint: 'Select Endpoint',
     manualInput: 'Manual Input Endpoint',

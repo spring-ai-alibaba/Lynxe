@@ -1215,6 +1215,8 @@ const words: I18nType = {
     },
     // 默认步骤标题
     defaultStepTitle: '步骤 {number}',
+    copyToClipboard: '复制到剪贴板',
+    copySuccess: '已复制到剪贴板',
   },
 
   // 定时任务
