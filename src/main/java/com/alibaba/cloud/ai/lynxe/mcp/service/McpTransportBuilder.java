@@ -215,11 +215,13 @@ public class McpTransportBuilder {
 		StdioClientTransport transport = new StdioClientTransport(serverParameters, jsonMapper);
 
 		// Set up error handler for server stderr output
-		// This captures all console.log/console.error output from MCP server and logs to error level
+		// This captures all console.log/console.error output from MCP server and logs to
+		// error level
 		transport.setStdErrorHandler(error -> {
 			if (error != null && !error.trim().isEmpty()) {
 				// Log all MCP server stderr output (including console.log) to error log
-				// This ensures all MCP server output is captured in error logs for debugging
+				// This ensures all MCP server output is captured in error logs for
+				// debugging
 				logger.error("[MCP Server] [{}]: {}", serverName, error);
 			}
 		});

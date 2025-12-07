@@ -38,8 +38,8 @@ public class McpProperties {
 	private Duration timeout = Duration.ofSeconds(60);
 
 	/**
-	 * Initialization timeout duration (separate from request timeout)
-	 * Used for MCP client initialization, which may take longer than regular requests
+	 * Initialization timeout duration (separate from request timeout) Used for MCP client
+	 * initialization, which may take longer than regular requests
 	 */
 	private Duration initializationTimeout = Duration.ofSeconds(120);
 

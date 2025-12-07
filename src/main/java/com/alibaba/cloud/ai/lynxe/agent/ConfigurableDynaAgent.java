@@ -109,7 +109,8 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		// Check if any TerminableTool is already included
 		boolean hasTerminableTool = false;
 		for (String toolKey : availableToolKeys) {
-			// Convert serviceGroup.toolName format to serviceGroup_toolName format if needed
+			// Convert serviceGroup.toolName format to serviceGroup_toolName format if
+			// needed
 			String lookupKey = convertServiceGroupToolNameToQualifiedKey(toolKey);
 			if (lookupKey == null) {
 				lookupKey = toolKey; // Use original key if conversion failed or not
@@ -167,7 +168,8 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		for (String toolKey : availableToolKeys) {
 			ToolCallBackContext toolCallback = null;
 
-			// Convert serviceGroup.toolName format to serviceGroup_toolName format if needed
+			// Convert serviceGroup.toolName format to serviceGroup_toolName format if
+			// needed
 			String lookupKey = convertServiceGroupToolNameToQualifiedKey(toolKey);
 			if (lookupKey == null) {
 				lookupKey = toolKey; // Use original key if conversion failed or not

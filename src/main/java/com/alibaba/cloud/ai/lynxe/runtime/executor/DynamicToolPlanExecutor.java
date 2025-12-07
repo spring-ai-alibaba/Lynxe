@@ -142,7 +142,8 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 			String modelName = step.getModelName();
 			List<String> selectedToolKeys = step.getSelectedToolKeys();
 
-			// Convert selectedToolKeys from serviceGroup.toolName to serviceGroup_toolName format
+			// Convert selectedToolKeys from serviceGroup.toolName to
+			// serviceGroup_toolName format
 			List<String> convertedToolKeys = convertSelectedToolKeys(selectedToolKeys);
 
 			BaseAgent executor = createConfigurableDynaAgent(context.getPlan().getCurrentPlanId(),

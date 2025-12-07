@@ -128,7 +128,8 @@ public class McpConnectionFactory {
 				}
 
 				// Create new client with fresh transport
-				// Use separate initialization timeout which may be longer than request timeout
+				// Use separate initialization timeout which may be longer than request
+				// timeout
 				mcpAsyncClient = McpClient.async(transport)
 					.requestTimeout(mcpProperties.getTimeout())
 					.initializationTimeout(mcpProperties.getInitializationTimeout())
@@ -139,18 +140,14 @@ public class McpConnectionFactory {
 						mcpServerName, attempt, maxRetries, mcpProperties.getInitializationTimeout().getSeconds());
 
 				long initStartTime = System.currentTimeMillis();
-				mcpAsyncClient.initialize()
-					.timeout(mcpProperties.getInitializationTimeout())
-					.doOnSuccess(result -> {
-						long initDuration = System.currentTimeMillis() - initStartTime;
-						logger.info("MCP client initialized successfully for {} in {}ms", mcpServerName, initDuration);
-					})
-					.doOnError(error -> {
-						long initDuration = System.currentTimeMillis() - initStartTime;
-						logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName,
-								initDuration, error.getMessage(), error);
-					})
-					.block();
+				mcpAsyncClient.initialize().timeout(mcpProperties.getInitializationTimeout()).doOnSuccess(result -> {
+					long initDuration = System.currentTimeMillis() - initStartTime;
+					logger.info("MCP client initialized successfully for {} in {}ms", mcpServerName, initDuration);
+				}).doOnError(error -> {
+					long initDuration = System.currentTimeMillis() - initStartTime;
+					logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName, initDuration,
+							error.getMessage(), error);
+				}).block();
 
 				logger.info("MCP transport configured successfully for: {} (attempt {})", mcpServerName, attempt);
 
@@ -249,18 +246,20 @@ public class McpConnectionFactory {
 		}
 
 		if (rootCause instanceof IOException) {
-			return String.format("IO error: %s. Check process startup, stdin/stdout communication, or file permissions.",
+			return String.format(
+					"IO error: %s. Check process startup, stdin/stdout communication, or file permissions.",
 					rootCauseMessage);
 		}
 
 		// Check for MCP protocol errors
 		if (rootCause.getClass().getName().contains("McpError")) {
-			return String.format("MCP protocol error: %s. Check server protocol version compatibility.", rootCauseMessage);
+			return String.format("MCP protocol error: %s. Check server protocol version compatibility.",
+					rootCauseMessage);
 		}
 
 		// Check for JSON parsing errors
-		if (rootCause.getClass().getName().contains("Json") || rootCauseMessage != null
-				&& rootCauseMessage.contains("JSON")) {
+		if (rootCause.getClass().getName().contains("Json")
+				|| rootCauseMessage != null && rootCauseMessage.contains("JSON")) {
 			return String.format("JSON parsing error: %s. Server response may be malformed.", rootCauseMessage);
 		}
 
