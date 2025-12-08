@@ -54,16 +54,17 @@ public class ClickByElementAction extends BrowserAction {
 
 				// For other elements, use standard waiting strategy
 				// Wait for element to be visible and enabled before clicking
-				locator.waitFor(new Locator.WaitForOptions()
-						.setTimeout(elementTimeout)
-						.setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
+				locator.waitFor(new Locator.WaitForOptions().setTimeout(elementTimeout)
+					.setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE));
 
 				// Try to scroll element into view if needed (non-blocking)
 				try {
 					locator.scrollIntoViewIfNeeded(new Locator.ScrollIntoViewIfNeededOptions().setTimeout(3000));
 					log.debug("Element scrolled into view successfully");
-				} catch (com.microsoft.playwright.TimeoutError scrollError) {
-					log.warn("Failed to scroll element into view, but will attempt to click anyway: {}", scrollError.getMessage());
+				}
+				catch (com.microsoft.playwright.TimeoutError scrollError) {
+					log.warn("Failed to scroll element into view, but will attempt to click anyway: {}",
+							scrollError.getMessage());
 				}
 
 				// Check if element is visible and enabled
@@ -72,9 +73,14 @@ public class ClickByElementAction extends BrowserAction {
 				}
 
 				// Click with explicit timeout and force option
-				locator.click(new Locator.ClickOptions()
-						.setTimeout(elementTimeout)
-						.setForce(false)); // Keep force=false to ensure element is truly clickable
+				locator.click(new Locator.ClickOptions().setTimeout(elementTimeout).setForce(false)); // Keep
+																										// force=false
+																										// to
+																										// ensure
+																										// element
+																										// is
+																										// truly
+																										// clickable
 
 				// Add small delay to ensure the action is processed
 				Thread.sleep(500);
