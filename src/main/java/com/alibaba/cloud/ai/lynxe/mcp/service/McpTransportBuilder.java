@@ -216,13 +216,12 @@ public class McpTransportBuilder {
 
 		// Set up error handler for server stderr output
 		// This captures all console.log/console.error output from MCP server and logs to
-		// error level
+		// info level
 		transport.setStdErrorHandler(error -> {
 			if (error != null && !error.trim().isEmpty()) {
-				// Log all MCP server stderr output (including console.log) to error log
-				// This ensures all MCP server output is captured in error logs for
-				// debugging
-				logger.error("[MCP Server] [{}]: {}", serverName, error);
+				// Log all MCP server stderr output (including console.log) to info log
+				// This ensures all MCP server output is captured in logs for debugging
+				logger.info("[MCP Server] [{}]: {}", serverName, error);
 			}
 		});
 

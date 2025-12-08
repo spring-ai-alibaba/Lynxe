@@ -133,15 +133,13 @@ public class ParallelExecutionService {
 		// Fill missing required parameters with empty string
 		Map<String, Object> filledParams = fillMissingParameters(params, requiredParamNames);
 
-		// Extract parent toolCallId and planDepth from context if available
-		String parentToolCallId = null;
+		// Extract planDepth from context if available
+		// Note: We always generate a new toolCallId for each tool execution to ensure
+		// proper sub-plan association. Each tool call needs its own unique toolCallId
+		// so that sub-plans can be correctly linked to their parent tool calls.
 		Integer propagatedPlanDepth = null;
 		try {
 			if (toolContext != null && toolContext.getContext() != null) {
-				Object v = toolContext.getContext().get("toolcallId");
-				if (v != null) {
-					parentToolCallId = String.valueOf(v);
-				}
 				Object d = toolContext.getContext().get("planDepth");
 				if (d instanceof Number) {
 					propagatedPlanDepth = ((Number) d).intValue();
@@ -155,8 +153,10 @@ public class ParallelExecutionService {
 			// ignore extraction errors
 		}
 
-		// Generate tool call ID
-		String toolCallId = (parentToolCallId != null) ? parentToolCallId : planIdDispatcher.generateToolCallId();
+		// Generate a unique tool call ID for each tool execution
+		// This is critical for sub-plan creation: each tool call needs its own toolCallId
+		// so that sub-plans can be properly associated with their parent tool calls
+		String toolCallId = planIdDispatcher.generateToolCallId();
 
 		// Determine depth level
 		final int depthLevel = (propagatedPlanDepth != null) ? propagatedPlanDepth : 0;

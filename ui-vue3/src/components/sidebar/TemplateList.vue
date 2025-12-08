@@ -149,10 +149,6 @@
               </div>
               <div class="task-details">
                 <div class="task-title">{{ template.title || $t('sidebar.unnamedPlan') }}</div>
-                <div v-if="isVersionOutdated(template)" class="version-warning">
-                  <Icon icon="carbon:warning" width="12" />
-                  <span>{{ $t('sidebar.versionOutdated') }}</span>
-                </div>
               </div>
               <div class="task-time">
                 {{
@@ -213,15 +209,13 @@
 </template>
 
 <script setup lang="ts">
-import { CommonApiService } from '@/api/common-api-service'
 import { usePlanTemplateConfigSingleton } from '@/composables/usePlanTemplateConfig'
 import { useRightPanelSingleton } from '@/composables/useRightPanel'
 import { useToast } from '@/plugins/useToast'
 import { templateStore, type TemplateStoreType } from '@/stores/templateStore'
 import type { PlanTemplateConfigVO } from '@/types/plan-template'
-import { isVersionOutdated as checkVersionOutdated } from '@/utils/version'
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -242,9 +236,6 @@ const searchKeyword = ref('')
 const showDeleteConfirmModal = ref(false)
 const templateToDelete = ref<PlanTemplateConfigVO | null>(null)
 const deleting = ref(false)
-
-// System version state
-const currentSystemVersion = ref<string>('unknown')
 
 // Emits
 const emit = defineEmits<{
@@ -366,26 +357,6 @@ const getGroupCollapseState = (groupName: string | null): boolean => {
 // Handle group collapse toggle
 const handleToggleGroupCollapse = (groupName: string | null) => {
   templateStore.toggleGroupCollapse(groupName)
-}
-
-// Load system version on mount
-onMounted(async () => {
-  try {
-    const versionInfo = await CommonApiService.getVersion()
-    if (versionInfo && versionInfo.version) {
-      currentSystemVersion.value = versionInfo.version
-    }
-  } catch (error) {
-    console.error('[TemplateList] Failed to load system version:', error)
-  }
-})
-
-// Check if template version is outdated
-const isVersionOutdated = (template: PlanTemplateConfigVO): boolean => {
-  if (!template.version || currentSystemVersion.value === 'unknown') {
-    return true
-  }
-  return checkVersionOutdated(template.version, currentSystemVersion.value)
 }
 
 // Handle select template
@@ -768,19 +739,6 @@ const cancelDelete = () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.version-warning {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #ff4444;
-  margin-top: 4px;
-}
-
-.version-warning svg {
-  flex-shrink: 0;
 }
 
 .task-time {
