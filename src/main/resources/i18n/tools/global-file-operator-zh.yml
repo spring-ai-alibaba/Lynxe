@@ -12,9 +12,9 @@ description: |
   - get_all_text: 获取文件的所有内容
     注意：如果文件内容太长，将自动存储在临时文件中并返回文件路径
   - append: 将内容追加到文件，需要 content 参数
-  - count_words: 统计文件中的单词数
+  - count_words: 统计文件中的字符数
   - grep: 在文件中搜索文本模式，类似于 Linux grep 命令
-    参数：pattern（必需）、case_sensitive（可选，默认 false）、whole_word（可选，默认 false）
+    参数：pattern（必需）、case_sensitive（可选，默认 false）、whole_word（可选，默认 false）、context_lines（可选，默认 0，显示匹配行上下指定行数的上下文）
 
   功能特性：
   - 在此处创建的文件可在执行上下文中的所有子计划中访问
@@ -170,6 +170,10 @@ parameters: |
                   "whole_word": {
                       "type": "boolean",
                       "description": "是否仅匹配完整单词（默认：false）"
+                  },
+                  "context_lines": {
+                      "type": "integer",
+                      "description": "显示匹配行上下指定行数的上下文（默认：0，不显示上下文）"
                   }
               },
               "required": ["action", "file_path", "pattern"],
