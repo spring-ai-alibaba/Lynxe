@@ -72,10 +72,11 @@ public class ToolController {
 				String toolName = functionInstance.getName();
 
 				// Construct key in serviceGroup.toolName format for frontend
-				// Backend will convert this to toolName*index* format during execution
+				// Backend will convert this to serviceGroup_toolName format during
+				// execution
 				String toolKey;
 				if (serviceGroup != null && !serviceGroup.isEmpty()) {
-					toolKey = serviceGroup + "." + toolName;
+					toolKey = serviceGroup + "_" + toolName;
 				}
 				else {
 					toolKey = toolName;

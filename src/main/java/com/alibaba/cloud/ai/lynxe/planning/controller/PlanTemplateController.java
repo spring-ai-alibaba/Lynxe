@@ -429,6 +429,8 @@ public class PlanTemplateController {
 					// Set createTime and updateTime from PlanTemplateConfigVO
 					configVO.setCreateTime(planTemplate.getCreateTime());
 					configVO.setUpdateTime(planTemplate.getUpdateTime());
+					// Set version from planTemplate
+					configVO.setVersion(planTemplate.getVersion());
 
 					// Convert ExecutionStep list to StepConfig list
 					if (planInterface.getAllSteps() != null) {
@@ -453,6 +455,10 @@ public class PlanTemplateController {
 						// Use toolConfig directly from the returned PlanTemplateConfigVO
 						if (toolConfigVO.getToolConfig() != null) {
 							configVO.setToolConfig(toolConfigVO.getToolConfig());
+						}
+						// Also set version from coordinator tool if not already set
+						if (configVO.getVersion() == null && toolConfigVO.getVersion() != null) {
+							configVO.setVersion(toolConfigVO.getVersion());
 						}
 					}
 
@@ -562,6 +568,8 @@ public class PlanTemplateController {
 			// Set createTime and updateTime from PlanTemplateConfigVO
 			configVO.setCreateTime(planTemplate.getCreateTime());
 			configVO.setUpdateTime(planTemplate.getUpdateTime());
+			// Set version from planTemplate
+			configVO.setVersion(planTemplate.getVersion());
 
 			// Convert ExecutionStep list to StepConfig list
 			if (planInterface.getAllSteps() != null) {
@@ -586,6 +594,10 @@ public class PlanTemplateController {
 				// Use toolConfig directly from the returned PlanTemplateConfigVO
 				if (toolConfigVO.getToolConfig() != null) {
 					configVO.setToolConfig(toolConfigVO.getToolConfig());
+				}
+				// Also set version from coordinator tool if not already set
+				if (configVO.getVersion() == null && toolConfigVO.getVersion() != null) {
+					configVO.setVersion(toolConfigVO.getVersion());
 				}
 			}
 

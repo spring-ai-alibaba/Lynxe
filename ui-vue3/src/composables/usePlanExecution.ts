@@ -42,9 +42,10 @@ export function usePlanExecution() {
   // Track retry attempts for plans not found
   const planRetryAttempts = reactive(new Map<string, number>())
 
-  // Reactive map of PlanExecutionRecord by planId (rootPlanId or currentPlanId)
+  // Reactive object of PlanExecutionRecord by planId (rootPlanId or currentPlanId)
   // This is the main reactive state that components watch
-  const planExecutionRecords = reactive(new Map<string, PlanExecutionRecord>())
+  // Using ref<Record> instead of reactive(Map) for better reactivity tracking
+  const planExecutionRecords = ref<Record<string, PlanExecutionRecord>>({})
 
   // Polling state
   const isPolling = ref(false)
@@ -54,11 +55,11 @@ export function usePlanExecution() {
    * Get PlanExecutionRecord by planId
    */
   const getPlanExecutionRecord = (planId: string): PlanExecutionRecord | undefined => {
-    return planExecutionRecords.get(planId)
+    return planExecutionRecords.value[planId]
   }
 
   /**
-   * Set a cached plan record in the reactive map
+   * Set a cached plan record in the reactive object
    * Useful for restoring conversation history
    */
   const setCachedPlanRecord = (planId: string, record: PlanExecutionRecord): void => {
@@ -66,7 +67,10 @@ export function usePlanExecution() {
       console.warn('[usePlanExecution] Cannot cache plan record with empty planId')
       return
     }
-    planExecutionRecords.set(planId, record)
+    planExecutionRecords.value = {
+      ...planExecutionRecords.value,
+      [planId]: record,
+    }
     console.log('[usePlanExecution] Cached plan record:', planId)
   }
 
@@ -172,14 +176,20 @@ export function usePlanExecution() {
         return
       }
 
-      // Update reactive map - this will trigger watchers in components
-      // Always use recordKey (rootPlanId or currentPlanId) as the map key
-      planExecutionRecords.set(recordKey, details)
+      // Update reactive object - this will trigger watchers in components
+      // Using object spread to create new reference, ensuring Vue reactivity
+      planExecutionRecords.value = {
+        ...planExecutionRecords.value,
+        [recordKey]: details,
+      }
 
       // If the passed planId is different from recordKey, also store it with the passed planId
       // This handles cases where the API returns a different planId than what was requested
       if (planId !== recordKey) {
-        planExecutionRecords.set(planId, details)
+        planExecutionRecords.value = {
+          ...planExecutionRecords.value,
+          [planId]: details,
+        }
         console.log('[usePlanExecution] Stored record with both keys:', { planId, recordKey })
       }
 
@@ -241,11 +251,13 @@ export function usePlanExecution() {
           // Clean up poll count tracking
           completedPlansPollCount.delete(recordKey)
 
-          // Remove from reactive map after a delay
+          // Remove from reactive object after a delay
           setTimeout(() => {
-            planExecutionRecords.delete(recordKey)
-            if (planId !== recordKey) {
-              planExecutionRecords.delete(planId)
+            const { [recordKey]: _removed, ...rest } = planExecutionRecords.value
+            planExecutionRecords.value = rest
+            if (planId !== recordKey && planExecutionRecords.value[planId]) {
+              const { [planId]: _removedPlanId, ...rest2 } = planExecutionRecords.value
+              planExecutionRecords.value = rest2
             }
           }, 5000)
         }
@@ -393,7 +405,7 @@ export function usePlanExecution() {
     completedPlansPollCount.clear()
     planPollAttempts.clear()
     planRetryAttempts.clear()
-    planExecutionRecords.clear()
+    planExecutionRecords.value = {}
     isPolling.value = false
   }
 

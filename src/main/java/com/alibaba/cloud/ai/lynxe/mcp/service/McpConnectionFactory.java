@@ -16,6 +16,7 @@
 package com.alibaba.cloud.ai.lynxe.mcp.service;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,20 +128,26 @@ public class McpConnectionFactory {
 				}
 
 				// Create new client with fresh transport
+				// Use separate initialization timeout which may be longer than request
+				// timeout
 				mcpAsyncClient = McpClient.async(transport)
 					.requestTimeout(mcpProperties.getTimeout())
+					.initializationTimeout(mcpProperties.getInitializationTimeout())
 					.clientInfo(new McpSchema.Implementation(mcpServerName, "1.0.0"))
 					.build();
 
-				logger.debug("Attempting to initialize MCP transport for: {} (attempt {}/{})", mcpServerName, attempt,
-						maxRetries);
+				logger.info("Attempting to initialize MCP transport for: {} (attempt {}/{}) with timeout: {}s",
+						mcpServerName, attempt, maxRetries, mcpProperties.getInitializationTimeout().getSeconds());
 
-				mcpAsyncClient.initialize()
-					.timeout(mcpProperties.getTimeout())
-					.doOnSuccess(result -> logger.info("MCP client initialized successfully for {}", mcpServerName))
-					.doOnError(error -> logger.error("Failed to initialize MCP client for {}: {}", mcpServerName,
-							error.getMessage()))
-					.block();
+				long initStartTime = System.currentTimeMillis();
+				mcpAsyncClient.initialize().timeout(mcpProperties.getInitializationTimeout()).doOnSuccess(result -> {
+					long initDuration = System.currentTimeMillis() - initStartTime;
+					logger.info("MCP client initialized successfully for {} in {}ms", mcpServerName, initDuration);
+				}).doOnError(error -> {
+					long initDuration = System.currentTimeMillis() - initStartTime;
+					logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName, initDuration,
+							error.getMessage(), error);
+				}).block();
 
 				logger.info("MCP transport configured successfully for: {} (attempt {})", mcpServerName, attempt);
 
@@ -149,6 +156,13 @@ public class McpConnectionFactory {
 			}
 			catch (Exception e) {
 				lastException = e;
+
+				// Enhanced error diagnosis and logging
+				String errorDiagnosis = diagnoseInitializationError(e, mcpServerName);
+				logger.error(
+						"Failed to initialize MCP transport for {} on attempt {}/{}. Error type: {}, Diagnosis: {}, Message: {}",
+						mcpServerName, attempt, maxRetries, e.getClass().getSimpleName(), errorDiagnosis,
+						e.getMessage(), e);
 
 				// Check if this is a DNS-related error that shouldn't be retried
 				if (isDnsRelatedError(e)) {
@@ -160,8 +174,19 @@ public class McpConnectionFactory {
 							"DNS resolution failed for MCP server '" + mcpServerName + "': " + e.getMessage(), e);
 				}
 
-				logger.warn("Failed to initialize MCP transport for {} on attempt {}/{}: {}", mcpServerName, attempt,
-						maxRetries, e.getMessage());
+				// Check if this is a timeout error
+				if (isTimeoutError(e)) {
+					logger.warn(
+							"Initialization timeout for MCP server '{}' after {}s. This may indicate the server is slow to start or unresponsive.",
+							mcpServerName, mcpProperties.getInitializationTimeout().getSeconds());
+				}
+
+				// Check if this is a process-related error (for STDIO transport)
+				if (isProcessRelatedError(e)) {
+					logger.error(
+							"Process-related error for MCP server '{}'. This may indicate the command failed to start or the process exited immediately. Check server stderr logs above.",
+							mcpServerName);
+				}
 
 				// Clean up the failed client and transport
 				cleanupClient(mcpAsyncClient, mcpServerName);
@@ -181,9 +206,78 @@ public class McpConnectionFactory {
 			}
 		}
 
-		logger.error("Failed to initialize MCP transport for {} after {} attempts", mcpServerName, maxRetries,
-				lastException);
+		// Final error logging with comprehensive diagnosis
+		String finalDiagnosis = diagnoseInitializationError(lastException, mcpServerName);
+		logger.error(
+				"Failed to initialize MCP transport for {} after {} attempts. Final error type: {}, Diagnosis: {}, Message: {}",
+				mcpServerName, maxRetries, lastException != null ? lastException.getClass().getSimpleName() : "null",
+				finalDiagnosis, lastException != null ? lastException.getMessage() : "null", lastException);
 		return null;
+	}
+
+	/**
+	 * Diagnose initialization error and provide detailed information
+	 * @param e Exception to diagnose
+	 * @param serverName Server name for context
+	 * @return Diagnosis string
+	 */
+	private String diagnoseInitializationError(Exception e, String serverName) {
+		if (e == null) {
+			return "Unknown error (exception is null)";
+		}
+
+		Throwable rootCause = getRootCause(e);
+		String rootCauseType = rootCause.getClass().getSimpleName();
+		String rootCauseMessage = rootCause.getMessage();
+
+		if (isTimeoutError(rootCause)) {
+			return String.format(
+					"Initialization timeout after %ds. Server may be slow to start, unresponsive, or the timeout is too short. Consider increasing mcp.initialization-timeout.",
+					mcpProperties.getInitializationTimeout().getSeconds());
+		}
+
+		if (isDnsRelatedError(rootCause)) {
+			return "DNS resolution failed. Check network connectivity and DNS configuration.";
+		}
+
+		if (isProcessRelatedError(rootCause)) {
+			return String.format(
+					"Process-related error. The MCP server process may have failed to start or exited immediately. Check: 1) Command exists and is executable, 2) Server stderr logs above for error details, 3) Process permissions.");
+		}
+
+		if (rootCause instanceof IOException) {
+			return String.format(
+					"IO error: %s. Check process startup, stdin/stdout communication, or file permissions.",
+					rootCauseMessage);
+		}
+
+		// Check for MCP protocol errors
+		if (rootCause.getClass().getName().contains("McpError")) {
+			return String.format("MCP protocol error: %s. Check server protocol version compatibility.",
+					rootCauseMessage);
+		}
+
+		// Check for JSON parsing errors
+		if (rootCause.getClass().getName().contains("Json")
+				|| rootCauseMessage != null && rootCauseMessage.contains("JSON")) {
+			return String.format("JSON parsing error: %s. Server response may be malformed.", rootCauseMessage);
+		}
+
+		return String.format("Error type: %s, Message: %s. Check full stack trace for details.", rootCauseType,
+				rootCauseMessage);
+	}
+
+	/**
+	 * Get root cause of exception
+	 * @param e Exception
+	 * @return Root cause
+	 */
+	private Throwable getRootCause(Throwable e) {
+		Throwable cause = e;
+		while (cause.getCause() != null && cause.getCause() != cause) {
+			cause = cause.getCause();
+		}
+		return cause;
 	}
 
 	/**
@@ -191,7 +285,7 @@ public class McpConnectionFactory {
 	 * @param e Exception to check
 	 * @return true if DNS-related, false otherwise
 	 */
-	private boolean isDnsRelatedError(Exception e) {
+	private boolean isDnsRelatedError(Throwable e) {
 		if (e == null)
 			return false;
 
@@ -202,6 +296,61 @@ public class McpConnectionFactory {
 		return message.contains("Failed to resolve") || message.contains("DnsNameResolverTimeoutException")
 				|| message.contains("SearchDomainUnknownHostException") || message.contains("UnknownHostException")
 				|| message.toLowerCase().contains("dns");
+	}
+
+	/**
+	 * Check if the exception is timeout-related
+	 * @param e Exception to check
+	 * @return true if timeout-related, false otherwise
+	 */
+	private boolean isTimeoutError(Throwable e) {
+		if (e == null)
+			return false;
+
+		// Check exception type
+		if (e instanceof TimeoutException || e instanceof java.util.concurrent.TimeoutException) {
+			return true;
+		}
+
+		// Check exception class name
+		String className = e.getClass().getName();
+		if (className.contains("Timeout")) {
+			return true;
+		}
+
+		// Check message
+		String message = e.getMessage();
+		if (message != null) {
+			String lowerMessage = message.toLowerCase();
+			return lowerMessage.contains("timeout") || lowerMessage.contains("timed out");
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if the exception is process-related (for STDIO transport)
+	 * @param e Exception to check
+	 * @return true if process-related, false otherwise
+	 */
+	private boolean isProcessRelatedError(Throwable e) {
+		if (e == null)
+			return false;
+
+		// Check exception type
+		if (e instanceof IOException) {
+			String message = e.getMessage();
+			if (message != null) {
+				String lowerMessage = message.toLowerCase();
+				return lowerMessage.contains("cannot run program") || lowerMessage.contains("process")
+						|| lowerMessage.contains("command") || lowerMessage.contains("exec")
+						|| lowerMessage.contains("spawn");
+			}
+		}
+
+		// Check exception class name
+		String className = e.getClass().getName();
+		return className.contains("Process") || className.contains("Exec");
 	}
 
 	/**

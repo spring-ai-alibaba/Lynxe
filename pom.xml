@@ -7,7 +7,7 @@
     <groupId>com.lynxe</groupId>
     <name>Lynxe - AI Agent Management System</name>
     <artifactId>lynxe</artifactId>
-    <version>4.8.5</version>
+    <version>4.8.6</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -28,6 +28,8 @@
         <spring-boot.version>3.5.6</spring-boot.version>
         <maven-deploy-plugin.version>3.1.1</maven-deploy-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+        <!-- Maven build timestamp for version.properties -->
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
 
         <!-- Spring AI Alibaba is adapting to Spring AI M8, latest code may fail to run -->
         <spring-ai-alibaba.version>1.0.0.4-SNAPSHOT</spring-ai-alibaba.version>
@@ -342,6 +344,22 @@
 
     <build>
         <finalName>lynxe</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>version.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -367,6 +385,19 @@
                 </executions>
                 <configuration>
                     <attach>true</attach>
+                </configuration>
+            </plugin>
+            <!-- Maven Resources Plugin - explicitly configure filtering -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <delimiters>
+                        <delimiter>${*}</delimiter>
+                    </delimiters>
+                    <useDefaultDelimiters>false</useDefaultDelimiters>
                 </configuration>
             </plugin>
             <plugin>
@@ -465,6 +496,26 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Plugin to automatically update VERSION file from pom.xml -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>update-version-file</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo file="${project.basedir}/VERSION" message="${project.version}" />
+                            </target>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

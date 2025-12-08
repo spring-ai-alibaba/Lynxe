@@ -67,7 +67,9 @@ public class GetTableMetaAction extends AbstractDatabaseAction {
 				? dataSourceService.getConnection(datasourceName) : dataSourceService.getConnection();
 				PreparedStatement ps = conn.prepareStatement(tableSql)) {
 			if (fuzzy) {
-				ps.setString(1, "%" + text + "%");
+				String pattern = "%" + text + "%";
+				ps.setString(1, pattern);
+				ps.setString(2, pattern);
 			}
 			try (ResultSet rs = ps.executeQuery()) {
 				while (rs.next()) {

@@ -462,7 +462,7 @@ const canExecute = computed(() => {
 
   // Also check if there are any tracked plans or running plans
   const hasTrackedPlans = planExecution.trackedPlanIds.value.size > 0
-  const recordsArray = Array.from(planExecution.planExecutionRecords.entries())
+  const recordsArray = Object.entries(planExecution.planExecutionRecords.value)
   const hasRunningPlansInRecords = recordsArray.some(
     ([, record]) => record && !record.completed && record.status !== 'failed'
   )
@@ -1249,8 +1249,8 @@ watch(
 
 // Watch for plan execution completion to reset isExecutingPlan
 watchEffect(() => {
-  const records = planExecution.planExecutionRecords
-  const recordsArray = Array.from(records.entries())
+  const records = planExecution.planExecutionRecords.value
+  const recordsArray = Object.entries(records)
 
   // Check both trackedPlanIds and planExecutionRecords to handle the case where
   // a plan has just started but hasn't been polled yet (no record in planExecutionRecords)

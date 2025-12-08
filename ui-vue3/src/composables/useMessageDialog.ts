@@ -886,14 +886,11 @@ export function useMessageDialog() {
    * Processes all dialogs with planIds, not just active one
    */
   watchEffect(() => {
-    const records = planExecution.planExecutionRecords
+    // Access the ref value to establish reactivity tracking
+    const records = planExecution.planExecutionRecords.value
 
-    // Force reactivity by accessing the Map size - this ensures watchEffect tracks Map changes
-    const recordsSize = records.size
-
-    // Iterate over all records in the Map to ensure watchEffect tracks all changes
-    // This is important for first-time execution when records are added to the Map
-    const recordsArray = Array.from(records.entries())
+    // Convert object to entries array for processing
+    const recordsArray = Object.entries(records)
 
     // Also access dialogList to ensure we re-run when dialogs change
     const dialogs = dialogList.value
@@ -901,8 +898,8 @@ export function useMessageDialog() {
     console.log(
       '[useMessageDialog] watchEffect triggered - records count:',
       recordsArray.length,
-      'size:',
-      recordsSize
+      'keys:',
+      Object.keys(records)
     )
     console.log('[useMessageDialog] watchEffect - dialogList count:', dialogs.length)
     console.log(
@@ -1017,10 +1014,8 @@ export function useMessageDialog() {
       const [, readonlyRecord] = recordEntry
 
       // Convert readonly record to mutable for processing
-      // Use type assertion to handle deeply readonly types from reactive Map
-      // The convertPlanExecutionRecord function will properly convert nested readonly arrays
       const record = convertPlanExecutionRecord(
-        readonlyRecord as unknown as PlanExecutionRecord
+        readonlyRecord as PlanExecutionRecord
       ) as PlanExecutionRecord
 
       console.log('[useMessageDialog] watchEffect: Updating message with plan record:', {

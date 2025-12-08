@@ -1425,10 +1425,10 @@ public class DynamicAgent extends ReActAgent {
 		log.info("🔍 collectEnvData called for tool: {}", toolCallName);
 		Map<String, ToolCallBackContext> toolCallBackContext = toolCallbackProvider.getToolCallBackContext();
 
-		// Convert serviceGroup.toolName format to toolName*index* format if needed
+		// Convert serviceGroup.toolName format to serviceGroup_toolName format if needed
 		String lookupKey = toolCallName;
 		try {
-			String convertedKey = serviceGroupIndexService.convertToolKeyToQualifiedKey(toolCallName);
+			String convertedKey = serviceGroupIndexService.constructFrontendToolKey(toolCallName);
 			if (convertedKey != null && !convertedKey.equals(toolCallName)) {
 				lookupKey = convertedKey;
 				log.debug("Converted tool key from '{}' to '{}' for collectEnvData", toolCallName, lookupKey);

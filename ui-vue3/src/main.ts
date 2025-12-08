@@ -19,6 +19,7 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import { i18n, initializeLanguage } from '@/base/i18n'
+import { useMessageDialogSingleton } from '@/composables/useMessageDialog'
 import 'ant-design-vue/dist/reset.css'
 import App from './App.vue'
 import router from './router'
@@ -39,6 +40,10 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia).use(Antd).use(Vue3ColorPicker).use(i18n).use(router)
+
+// Initialize message dialog singleton early to ensure watchEffect is registered
+// This ensures plan execution tracking works regardless of which route is accessed
+useMessageDialogSingleton()
 
 // Initialize language before mounting the app
 initializeLanguage()

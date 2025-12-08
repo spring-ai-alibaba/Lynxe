@@ -86,6 +86,7 @@ export interface PlanTemplateConfigVO {
   toolConfig?: ToolConfigVO
   createTime?: string
   updateTime?: string
+  version?: string
 }
 
 export interface CreateOrUpdatePlanTemplateWithToolResponse {

@@ -109,7 +109,8 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		// Check if any TerminableTool is already included
 		boolean hasTerminableTool = false;
 		for (String toolKey : availableToolKeys) {
-			// Convert serviceGroup.toolName format to toolName*index* format if needed
+			// Convert serviceGroup.toolName format to serviceGroup_toolName format if
+			// needed
 			String lookupKey = convertServiceGroupToolNameToQualifiedKey(toolKey);
 			if (lookupKey == null) {
 				lookupKey = toolKey; // Use original key if conversion failed or not
@@ -138,7 +139,7 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		// Add TerminateTool if no TerminableTool is present
 		if (!hasTerminableTool) {
 			// Try to find TerminateTool by unqualified name first
-			// The qualified key format is now toolName[index], so we search for it
+			// The qualified key format is now serviceGroup_toolName, so we search for it
 			ToolCallBackContext terminateToolContext = findToolByUnqualifiedName(toolCallBackContext,
 					TerminateTool.name);
 			if (terminateToolContext != null) {
@@ -167,7 +168,8 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		for (String toolKey : availableToolKeys) {
 			ToolCallBackContext toolCallback = null;
 
-			// Convert serviceGroup.toolName format to toolName*index* format if needed
+			// Convert serviceGroup.toolName format to serviceGroup_toolName format if
+			// needed
 			String lookupKey = convertServiceGroupToolNameToQualifiedKey(toolKey);
 			if (lookupKey == null) {
 				lookupKey = toolKey; // Use original key if conversion failed or not
@@ -199,11 +201,11 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 	}
 
 	/**
-	 * Convert serviceGroup.toolName format to toolName*index* format This method
+	 * Convert serviceGroup.toolName format to serviceGroup_toolName format This method
 	 * delegates to ServiceGroupIndexService for the conversion logic
 	 * @param toolKey The tool key in serviceGroup.toolName format or other formats
-	 * @return The converted key in toolName*index* format, or null if conversion is not
-	 * needed
+	 * @return The converted key in serviceGroup_toolName format, or null if conversion is
+	 * not needed
 	 */
 	private String convertServiceGroupToolNameToQualifiedKey(String toolKey) {
 		if (toolKey == null || toolKey.isEmpty() || serviceGroupIndexService == null) {
@@ -211,7 +213,7 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 		}
 
 		try {
-			String convertedKey = serviceGroupIndexService.convertToolKeyToQualifiedKey(toolKey);
+			String convertedKey = serviceGroupIndexService.constructFrontendToolKey(toolKey);
 			// Return null if key was not converted (already in correct format)
 			if (convertedKey != null && !convertedKey.equals(toolKey)) {
 				return convertedKey;
@@ -228,15 +230,15 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 
 	/**
 	 * Find a tool by unqualified name (backward compatibility helper) Searches for tools
-	 * where the qualified key is "toolName" or "toolName[index]" Uses
+	 * where the qualified key is "toolName" or "serviceGroup_toolName" Uses
 	 * ServiceGroupIndexService to construct qualified keys when serviceGroup is available
 	 * @param toolCallBackContext Map of all available tools
-	 * @param unqualifiedName The tool name without index suffix
+	 * @param unqualifiedName The tool name without serviceGroup prefix
 	 * @return The matching ToolCallBackContext or null if not found
 	 */
 	private ToolCallBackContext findToolByUnqualifiedName(Map<String, ToolCallBackContext> toolCallBackContext,
 			String unqualifiedName) {
-		// First try exact match (for tools that don't have index suffix)
+		// First try exact match (for tools that don't have serviceGroup prefix)
 		if (toolCallBackContext.containsKey(unqualifiedName)) {
 			return toolCallBackContext.get(unqualifiedName);
 		}
@@ -257,9 +259,8 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 			}
 		}
 
-		// Fallback: Then try to find by matching the tool name part before the index
-		// bracket
-		// Format: toolName[index] or just toolName
+		// Fallback: Then try to find by matching the tool name part after the underscore
+		// Format: serviceGroup_toolName or just toolName
 		for (Map.Entry<String, ToolCallBackContext> entry : toolCallBackContext.entrySet()) {
 			String qualifiedKey = entry.getKey();
 
@@ -268,10 +269,10 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 				return entry.getValue();
 			}
 
-			// Check if the qualified key is in format "toolName[index]"
-			int bracketIndex = qualifiedKey.lastIndexOf('[');
-			if (bracketIndex > 0) {
-				String toolNamePart = qualifiedKey.substring(0, bracketIndex);
+			// Check if the qualified key is in format "serviceGroup_toolName"
+			int underscoreIndex = qualifiedKey.lastIndexOf('_');
+			if (underscoreIndex > 0 && underscoreIndex < qualifiedKey.length() - 1) {
+				String toolNamePart = qualifiedKey.substring(underscoreIndex + 1);
 				if (toolNamePart.equals(unqualifiedName)) {
 					log.debug("Backward compatibility: Matched unqualified tool '{}' to qualified key '{}'",
 							unqualifiedName, qualifiedKey);
@@ -303,18 +304,15 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 
 					// Check if tool name matches
 					if (toolName.equals(actualToolName)) {
-						// If serviceGroup exists, construct qualified key using
-						// ServiceGroupIndexService
+						// If serviceGroup exists, construct qualified key in
+						// serviceGroup_toolName format
 						if (serviceGroup != null && !serviceGroup.isEmpty()) {
-							Integer index = serviceGroupIndexService.getOrAssignIndex(serviceGroup);
-							if (index != null) {
-								String expectedQualifiedKey = actualToolName + "*" + index + "*";
-								// Check if the constructed key matches the entry key
-								if (entry.getKey().equals(expectedQualifiedKey)) {
-									log.debug("Found tool '{}' with serviceGroup '{}' using ServiceGroupIndexService",
-											toolName, serviceGroup);
-									return context;
-								}
+							String expectedQualifiedKey = serviceGroup + "_" + actualToolName;
+							// Check if the constructed key matches the entry key
+							if (entry.getKey().equals(expectedQualifiedKey)) {
+								log.debug("Found tool '{}' with serviceGroup '{}' using ServiceGroupIndexService",
+										toolName, serviceGroup);
+								return context;
 							}
 						}
 						else {

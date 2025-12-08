@@ -153,6 +153,9 @@ export function usePlanTemplateConfig() {
       accessLevel: accessLevel,
       serviceGroup: newConfig.serviceGroup || '',
     }
+    if (newConfig.version !== undefined) {
+      updatedConfig.version = newConfig.version
+    }
     if (newConfig.toolConfig) {
       updatedConfig.toolConfig = { ...newConfig.toolConfig }
     }
@@ -175,7 +178,10 @@ export function usePlanTemplateConfig() {
       accessLevel: 'editable',
       serviceGroup: '',
     })
-    // Remove toolConfig if it exists
+    // Remove version and toolConfig if they exist
+    if ('version' in config) {
+      delete config.version
+    }
     if ('toolConfig' in config) {
       delete config.toolConfig
     }
@@ -204,6 +210,9 @@ export function usePlanTemplateConfig() {
       planTemplateId: config.planTemplateId || '',
       accessLevel: accessLevel,
       serviceGroup: config.serviceGroup || '',
+    }
+    if (config.version !== undefined) {
+      jsonConfig.version = config.version
     }
     // Include toolConfig if it exists
     if (config.toolConfig) {

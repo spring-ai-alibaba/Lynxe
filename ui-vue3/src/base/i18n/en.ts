@@ -498,6 +498,12 @@ const words: I18nType = {
         imageType: 'Image Type',
         maxRetryAttempts: 'Max Retry Attempts',
       },
+      versionInfo: {
+        title: 'Version Information',
+        version: 'Version',
+        buildTime: 'Build Time',
+        currentTime: 'Current Time',
+      },
       systemSettings: {
         systemName: 'System Name',
         language: 'Language',
@@ -827,6 +833,8 @@ const words: I18nType = {
       'Are you sure you want to delete plan template "{templateName}"? This action cannot be undone.',
     deleteSuccess: 'Plan template deleted successfully',
     deleteFailed: 'Failed to delete plan template',
+    versionOutdated:
+      'Function version is old, check if it is still usable, clicking save on the function can remove this warning',
     jsonTemplate: 'Func-Agent Plan Template Editor',
     rollback: 'Rollback',
     restore: 'Restore',
@@ -1272,6 +1280,8 @@ const words: I18nType = {
     },
     // Default step title
     defaultStepTitle: 'Step {number}',
+    copyToClipboard: 'Copy to clipboard',
+    copySuccess: 'Copied to clipboard',
   },
 
   // Cron Task
@@ -1331,6 +1341,8 @@ const words: I18nType = {
     httpEndpointDescription:
       'HTTP POST service endpoint address for calling this function via HTTP interface',
     copy: 'Copy',
+    copyToClipboard: 'Copy to clipboard',
+    copySuccess: 'Copied to clipboard',
     copyFailed: 'Copy failed',
     selectEndpoint: 'Select Endpoint',
     manualInput: 'Manual Input Endpoint',

@@ -367,10 +367,10 @@ onMounted(() => {
   // Watch for plan completion to reset session (reactive approach)
   // Only reset when ALL plans are completed, not when any single plan completes
   watch(
-    () => planExecution.planExecutionRecords,
+    () => planExecution.planExecutionRecords.value,
     records => {
       // Check if ALL tracked plans are completed
-      const recordsArray = Array.from(records.entries())
+      const recordsArray = Object.entries(records)
       if (recordsArray.length === 0) {
         return // No plans to check
       }

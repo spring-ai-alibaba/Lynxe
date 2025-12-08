@@ -62,20 +62,20 @@ public class ParallelExecutionService {
 
 	/**
 	 * Look up tool context using qualified key conversion This method handles the
-	 * conversion from raw tool name to qualified key format (toolName*index*) based on
-	 * serviceGroup, and provides fallback to original toolName if conversion fails.
+	 * conversion from raw tool name to qualified key format (serviceGroup_toolName) based
+	 * on serviceGroup, and provides fallback to original toolName if conversion fails.
 	 * @param toolName The raw tool name to look up
 	 * @param toolCallbackMap Map of tool callbacks
 	 * @return ToolCallBackContext if found, null otherwise
 	 */
 	public ToolCallBackContext lookupToolContext(String toolName, Map<String, ToolCallBackContext> toolCallbackMap) {
-		// Convert tool name to qualified key format (toolName*index*) if needed
+		// Convert tool name to qualified key format (serviceGroup_toolName) if needed
 		// This handles the case where tools are registered with qualified keys based on
 		// serviceGroup
 		String lookupKey = toolName;
 		if (serviceGroupIndexService != null) {
 			try {
-				String convertedKey = serviceGroupIndexService.convertToolKeyToQualifiedKey(toolName);
+				String convertedKey = serviceGroupIndexService.constructFrontendToolKey(toolName);
 				if (convertedKey != null && !convertedKey.equals(toolName)) {
 					lookupKey = convertedKey;
 					logger.debug("Converted tool key from '{}' to '{}' for lookup", toolName, lookupKey);
@@ -133,15 +133,13 @@ public class ParallelExecutionService {
 		// Fill missing required parameters with empty string
 		Map<String, Object> filledParams = fillMissingParameters(params, requiredParamNames);
 
-		// Extract parent toolCallId and planDepth from context if available
-		String parentToolCallId = null;
+		// Extract planDepth from context if available
+		// Note: We always generate a new toolCallId for each tool execution to ensure
+		// proper sub-plan association. Each tool call needs its own unique toolCallId
+		// so that sub-plans can be correctly linked to their parent tool calls.
 		Integer propagatedPlanDepth = null;
 		try {
 			if (toolContext != null && toolContext.getContext() != null) {
-				Object v = toolContext.getContext().get("toolcallId");
-				if (v != null) {
-					parentToolCallId = String.valueOf(v);
-				}
 				Object d = toolContext.getContext().get("planDepth");
 				if (d instanceof Number) {
 					propagatedPlanDepth = ((Number) d).intValue();
@@ -155,8 +153,10 @@ public class ParallelExecutionService {
 			// ignore extraction errors
 		}
 
-		// Generate tool call ID
-		String toolCallId = (parentToolCallId != null) ? parentToolCallId : planIdDispatcher.generateToolCallId();
+		// Generate a unique tool call ID for each tool execution
+		// This is critical for sub-plan creation: each tool call needs its own toolCallId
+		// so that sub-plans can be properly associated with their parent tool calls
+		String toolCallId = planIdDispatcher.generateToolCallId();
 
 		// Determine depth level
 		final int depthLevel = (propagatedPlanDepth != null) ? propagatedPlanDepth : 0;

@@ -211,12 +211,12 @@
 <script setup lang="ts">
 import { usePlanTemplateConfigSingleton } from '@/composables/usePlanTemplateConfig'
 import { useRightPanelSingleton } from '@/composables/useRightPanel'
+import { useToast } from '@/plugins/useToast'
 import { templateStore, type TemplateStoreType } from '@/stores/templateStore'
 import type { PlanTemplateConfigVO } from '@/types/plan-template'
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useToast } from '@/plugins/useToast'
 
 const { t } = useI18n()
 

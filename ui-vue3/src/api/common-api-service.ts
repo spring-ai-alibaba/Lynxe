@@ -120,4 +120,29 @@ export class CommonApiService {
     }
     return response
   }
+
+  /**
+   * Get version information
+   */
+  public static async getVersion(): Promise<{
+    version: string
+    buildTime: string
+    timestamp: string
+  }> {
+    try {
+      const response = await fetch('/api/version')
+      if (!response.ok) {
+        throw new Error(`Failed to get version: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error: unknown) {
+      console.error('[CommonApiService] Failed to get version:', error)
+      // Return default values on error
+      return {
+        version: 'unknown',
+        buildTime: 'unknown',
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

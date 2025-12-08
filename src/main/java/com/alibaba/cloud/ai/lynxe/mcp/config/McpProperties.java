@@ -38,6 +38,12 @@ public class McpProperties {
 	private Duration timeout = Duration.ofSeconds(60);
 
 	/**
+	 * Initialization timeout duration (separate from request timeout) Used for MCP client
+	 * initialization, which may take longer than regular requests
+	 */
+	private Duration initializationTimeout = Duration.ofSeconds(120);
+
+	/**
 	 * Cache expiration time after access
 	 */
 	private Duration cacheExpireAfterAccess = Duration.ofMinutes(10);
@@ -72,6 +78,14 @@ public class McpProperties {
 
 	public void setTimeout(Duration timeout) {
 		this.timeout = timeout;
+	}
+
+	public Duration getInitializationTimeout() {
+		return initializationTimeout;
+	}
+
+	public void setInitializationTimeout(Duration initializationTimeout) {
+		this.initializationTimeout = initializationTimeout;
 	}
 
 	public Duration getCacheExpireAfterAccess() {

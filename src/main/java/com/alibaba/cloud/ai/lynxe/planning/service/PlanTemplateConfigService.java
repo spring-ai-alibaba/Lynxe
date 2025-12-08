@@ -63,6 +63,9 @@ public class PlanTemplateConfigService {
 	@Autowired
 	private com.alibaba.cloud.ai.lynxe.runtime.service.IPlanIdDispatcher planIdDispatcher;
 
+	@Autowired
+	private com.alibaba.cloud.ai.lynxe.runtime.service.VersionService versionService;
+
 	/**
 	 * Prepare PlanTemplateConfigVO with toolConfig This method ensures toolConfig is
 	 * properly set with input schema
@@ -573,6 +576,11 @@ public class PlanTemplateConfigService {
 				existingEntity.setEnableMcpService(false);
 			}
 
+			// Auto-update version when updating tool
+			String currentVersion = versionService.getCurrentVersion();
+			existingEntity.setVersion(currentVersion);
+			log.debug("Updated version to '{}' for coordinator tool ID: {}", currentVersion, id);
+
 			FuncAgentToolEntity savedEntity = funcAgentToolRepository.save(existingEntity);
 			log.info("Successfully updated FuncAgentToolEntity: {} with ID: {}", savedEntity.getToolDescription(),
 					savedEntity.getId());
@@ -728,6 +736,11 @@ public class PlanTemplateConfigService {
 			// Set enableMcpService to false by default for backward compatibility
 			entity.setEnableMcpService(false);
 
+			// Auto-set current version when creating tool
+			String currentVersion = versionService.getCurrentVersion();
+			entity.setVersion(currentVersion);
+			log.debug("Set version '{}' for new coordinator tool: {}", currentVersion, configVO.getPlanTemplateId());
+
 			FuncAgentToolEntity savedEntity = funcAgentToolRepository.save(entity);
 			log.info("Successfully saved FuncAgentToolEntity: {} with ID: {}", savedEntity.getToolDescription(),
 					savedEntity.getId());
@@ -865,6 +878,7 @@ public class PlanTemplateConfigService {
 				configVO.setPlanTemplateId(entity.getPlanTemplateId());
 				configVO.setTitle(entity.getToolName());
 				configVO.setServiceGroup(entity.getServiceGroup());
+				configVO.setVersion(entity.getVersion());
 				PlanTemplateAccessLevel entityAccessLevel = entity.getAccessLevel();
 				if (entityAccessLevel != null) {
 					configVO.setAccessLevel(entityAccessLevel);
@@ -1078,9 +1092,11 @@ public class PlanTemplateConfigService {
 	private PlanTemplateConfigVO convertEntityToPlanTemplateConfigVO(FuncAgentToolEntity entity) {
 		PlanTemplateConfigVO configVO = new PlanTemplateConfigVO();
 		configVO.setPlanTemplateId(entity.getPlanTemplateId());
+		configVO.setTitle(entity.getToolName());
 
 		// Get additional info from entity
 		configVO.setServiceGroup(entity.getServiceGroup());
+		configVO.setVersion(entity.getVersion());
 		PlanTemplateAccessLevel entityAccessLevel = entity.getAccessLevel();
 		if (entityAccessLevel != null) {
 			configVO.setAccessLevel(entityAccessLevel.getValue());

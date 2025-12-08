@@ -15,10 +15,13 @@
  */
 package com.alibaba.cloud.ai.lynxe.runtime.executor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.model.tool.ToolCallingManager;
 
 import com.alibaba.cloud.ai.lynxe.agent.BaseAgent;
@@ -50,6 +53,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * user-selected tools support
  */
 public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
+
+	private static final Logger log = LoggerFactory.getLogger(DynamicToolPlanExecutor.class);
 
 	/**
 	 * Constructor for DynamicAgentPlanExecutor
@@ -137,9 +142,13 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 			String modelName = step.getModelName();
 			List<String> selectedToolKeys = step.getSelectedToolKeys();
 
+			// Convert selectedToolKeys from serviceGroup.toolName to
+			// serviceGroup_toolName format
+			List<String> convertedToolKeys = convertSelectedToolKeys(selectedToolKeys);
+
 			BaseAgent executor = createConfigurableDynaAgent(context.getPlan().getCurrentPlanId(),
 					context.getPlan().getRootPlanId(), initSettings, expectedReturnInfo, step, modelName,
-					selectedToolKeys, context.getPlanDepth(), context.getConversationId());
+					convertedToolKeys, context.getPlanDepth(), context.getConversationId());
 			return executor;
 		}
 		else {
@@ -177,6 +186,38 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 			}
 		});
 		return agent;
+	}
+
+	/**
+	 * Convert selectedToolKeys from serviceGroup.toolName format to serviceGroup_toolName
+	 * format
+	 * @param selectedToolKeys List of tool keys in serviceGroup.toolName format (from
+	 * frontend)
+	 * @return List of tool keys in serviceGroup_toolName format (for backend lookup)
+	 */
+	private List<String> convertSelectedToolKeys(List<String> selectedToolKeys) {
+		if (selectedToolKeys == null || selectedToolKeys.isEmpty()) {
+			return selectedToolKeys;
+		}
+
+		List<String> convertedKeys = new ArrayList<>();
+		for (String toolKey : selectedToolKeys) {
+			if (toolKey == null || toolKey.isEmpty()) {
+				convertedKeys.add(toolKey);
+				continue;
+			}
+
+			// Convert serviceGroup.toolName to serviceGroup_toolName using
+			// ServiceGroupIndexService
+			String convertedKey = serviceGroupIndexService.constructFrontendToolKey(toolKey);
+			convertedKeys.add(convertedKey);
+
+			if (!convertedKey.equals(toolKey)) {
+				log.debug("Converted tool key from '{}' to '{}'", toolKey, convertedKey);
+			}
+		}
+
+		return convertedKeys;
 	}
 
 }
