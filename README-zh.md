@@ -9,9 +9,9 @@
 
 [English](./README.md) | 🌍 **中文**
 
-📚 开发者文档: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
-
 [关于](#-关于) • [快速开始](#-快速开始) • [如何贡献](#-如何贡献)
+
+[使用案例](https://github.com/Lynxe-public/Lynxe-public-prompts)
 
 </div>
 
@@ -206,7 +206,7 @@ Lynxe 支持 H2（默认）、MySQL 以及 PostgreSQL 数据库。
 
 在您的浏览器中访问 `http://localhost:18080`。
 
-🎉 **恭喜!** 您的多 Agent 系统现已上线并准备就绪。 你可以访问https://github.com/talk-flow/public-usecase 去做一些我们认为比较有效的实践。
+🎉 **恭喜!** 您的多 Agent 系统现已上线并准备就绪。 你可以访问https://github.com/Lynxe-public/Lynxe-public-prompts 去做一些我们认为比较有效的实践。
 
 ## 稳定版本的 Release
 
@@ -261,5 +261,7 @@ mvn spring-boot:run
 ## 交流讨论
 
 点击这个链接加入钉钉群讨论：[钉群链接](https://qr.dingtalk.com/action/joingroup?code=v1,k1,PBuFX00snERuKcnnG4YAPK52FOXwAkLYlulUUD9KiRo=&_dt_no_comment=1&origin=11)
+
+📚 开发者文档: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
 
 </div>
