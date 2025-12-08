@@ -25,7 +25,7 @@ public class BrowserRequestVO {
 	/**
 	 * Browser operation type Supports: navigate, click, input_text, key_enter,
 	 * screenshot, get_html, get_text, execute_js, scroll, switch_tab, new_tab, close_tab,
-	 * refresh, get_element_position, move_to_and_click
+	 * refresh, get_element_position, move_to_and_click, get_web_content, download
 	 */
 	private String action;
 
@@ -35,7 +35,7 @@ public class BrowserRequestVO {
 	private String url;
 
 	/**
-	 * Element index, used for click, input_text and key_enter operations
+	 * Element index, used for click, input_text, key_enter and download operations
 	 */
 	private Integer index;
 

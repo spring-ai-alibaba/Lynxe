@@ -15,19 +15,14 @@
  */
 package com.alibaba.cloud.ai.lynxe.tool.browser;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility class to clean Chrome browsing history from userDataDir while preserving
@@ -93,14 +88,13 @@ public class ChromeHistoryCleaner {
 		try {
 			// Delete history files
 			for (String historyFile : HISTORY_FILES) {
-				Path filePath = defaultProfilePath.resolve(historyFile);
-
 				if (historyFile.contains("*")) {
 					// Handle pattern matching (e.g., "History Index *")
 					String baseName = historyFile.replace("*", "").trim();
 					deleteFilesByPattern(defaultProfilePath, baseName, deletedFiles, errors);
 				}
 				else {
+					Path filePath = defaultProfilePath.resolve(historyFile);
 					deleteFileIfExists(filePath, deletedFiles, errors);
 				}
 			}
@@ -136,13 +130,12 @@ public class ChromeHistoryCleaner {
 	 */
 	private static void cleanHistoryFromProfile(Path profilePath, List<String> deletedFiles, List<String> errors) {
 		for (String historyFile : HISTORY_FILES) {
-			Path filePath = profilePath.resolve(historyFile);
-
 			if (historyFile.contains("*")) {
 				String baseName = historyFile.replace("*", "").trim();
 				deleteFilesByPattern(profilePath, baseName, deletedFiles, errors);
 			}
 			else {
+				Path filePath = profilePath.resolve(historyFile);
 				deleteFileIfExists(filePath, deletedFiles, errors);
 			}
 		}
