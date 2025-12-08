@@ -13,6 +13,7 @@ description: |
   - 'close_tab': Close specified tab (defaults to current tab)
   - 'switch_tab': Switch to specific tab
   - 'get_web_content': Get current page ARIA snapshot content
+  - 'download': Click download link and save file to specified directory
 
   Note: Browser operations have timeout configuration, default is 30 seconds.
 
@@ -180,6 +181,21 @@ parameters: |
                   }
               },
               "required": ["action"],
+              "additionalProperties": false
+          },
+          {
+              "type": "object",
+              "properties": {
+                  "action": {
+                      "type": "string",
+                      "const": "download"
+                  },
+                  "index": {
+                      "type": "integer",
+                      "description": "Element index of the download link or button to click. This corresponds to the idx value (e.g., idx=39) shown in the ARIA snapshot for each interactive element."
+                  }
+              },
+              "required": ["action", "index"],
               "additionalProperties": false
           }
       ]
