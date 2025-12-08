@@ -9,9 +9,9 @@
 
 🌍 [English](./README.md) | [中文](./README-zh.md)
 
-📚 Developer Docs: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
-
 [About](#-about) • [Quick Start](#-quick-start) • [Contributing](#-contributing)
+
+[Use Cases](https://github.com/Lynxe-public/Lynxe-public-prompts)
 
 </div>
 
@@ -211,7 +211,7 @@ Lynxe supports both H2 (default)、MySQL and PostgreSQL databases.
 
 Navigate to `http://localhost:18080` in your browser.
 
-🎉 **Congratulations!** Your multi-agent system is now live and ready for action. You can visit https://github.com/talk-flow/public-usecase to explore some effective practices we recommend.
+🎉 **Congratulations!** Your multi-agent system is now live and ready for action. You can visit https://github.com/Lynxe-public/Lynxe-public-prompts to explore some effective practices we recommend.
 
 ## Stable Release
 
@@ -266,5 +266,7 @@ mvn spring-boot:run
 **Crafted with ❤️ by the Spring AI Alibaba Team**
 
 ⭐ **Star us on GitHub** if Lynxe accelerated your development journey!
+
+📚 Developer Docs: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
 
 </div>
