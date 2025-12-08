@@ -27,8 +27,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Action to handle file downloads in the browser.
- * This action clicks on a download link/button and waits for the file to be downloaded.
+ * Action to handle file downloads in the browser. This action clicks on a download
+ * link/button and waits for the file to be downloaded.
  */
 public class DownloadFileAction extends BrowserAction {
 
@@ -76,16 +76,18 @@ public class DownloadFileAction extends BrowserAction {
 
 			// Click the download element
 			log.info("Clicking element with index {} to trigger download", index);
-			locator.first().click(new com.microsoft.playwright.Locator.ClickOptions().setTimeout(getElementTimeoutMs()));
+			locator.first()
+				.click(new com.microsoft.playwright.Locator.ClickOptions().setTimeout(getElementTimeoutMs()));
 
 			// Wait for download to start (with timeout)
 			Download download;
 			try {
 				download = downloadFuture.get(getBrowserTimeoutSec(), TimeUnit.SECONDS);
-			} catch (java.util.concurrent.TimeoutException e) {
+			}
+			catch (java.util.concurrent.TimeoutException e) {
 				log.warn("No download was triggered within timeout period");
-				return new ToolExecuteResult("No download was triggered after clicking element with index " + index +
-					". The element might not be a download link or the download might have been blocked.");
+				return new ToolExecuteResult("No download was triggered after clicking element with index " + index
+						+ ". The element might not be a download link or the download might have been blocked.");
 			}
 
 			// Get suggested filename
@@ -110,16 +112,11 @@ public class DownloadFileAction extends BrowserAction {
 			String fileSizeStr = formatFileSize(fileSize);
 
 			return new ToolExecuteResult(String.format(
-				"File downloaded successfully:\n" +
-				"- Filename: %s\n" +
-				"- Size: %s\n" +
-				"- Location: %s",
-				suggestedFilename,
-				fileSizeStr,
-				downloadPath.toString()
-			));
+					"File downloaded successfully:\n" + "- Filename: %s\n" + "- Size: %s\n" + "- Location: %s",
+					suggestedFilename, fileSizeStr, downloadPath.toString()));
 
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			log.error("Error during download action: {}", e.getMessage(), e);
 			return new ToolExecuteResult("Download failed: " + e.getMessage());
 		}
@@ -131,12 +128,16 @@ public class DownloadFileAction extends BrowserAction {
 	private String formatFileSize(long bytes) {
 		if (bytes < 1024) {
 			return bytes + " B";
-		} else if (bytes < 1024 * 1024) {
+		}
+		else if (bytes < 1024 * 1024) {
 			return String.format("%.2f KB", bytes / 1024.0);
-		} else if (bytes < 1024 * 1024 * 1024) {
+		}
+		else if (bytes < 1024 * 1024 * 1024) {
 			return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
-		} else {
+		}
+		else {
 			return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
 		}
 	}
+
 }
