@@ -37,7 +37,6 @@ export function usePlanTemplateConfig() {
     planTemplateId: '',
     accessLevel: 'editable',
     serviceGroup: '',
-    version: undefined,
   })
 
   // Loading state
@@ -153,7 +152,9 @@ export function usePlanTemplateConfig() {
       planTemplateId: newConfig.planTemplateId || '',
       accessLevel: accessLevel,
       serviceGroup: newConfig.serviceGroup || '',
-      version: newConfig.version,
+    }
+    if (newConfig.version !== undefined) {
+      updatedConfig.version = newConfig.version
     }
     if (newConfig.toolConfig) {
       updatedConfig.toolConfig = { ...newConfig.toolConfig }
@@ -176,9 +177,11 @@ export function usePlanTemplateConfig() {
       planTemplateId: '',
       accessLevel: 'editable',
       serviceGroup: '',
-      version: undefined,
     })
-    // Remove toolConfig if it exists
+    // Remove version and toolConfig if they exist
+    if ('version' in config) {
+      delete config.version
+    }
     if ('toolConfig' in config) {
       delete config.toolConfig
     }
@@ -207,7 +210,9 @@ export function usePlanTemplateConfig() {
       planTemplateId: config.planTemplateId || '',
       accessLevel: accessLevel,
       serviceGroup: config.serviceGroup || '',
-      version: config.version,
+    }
+    if (config.version !== undefined) {
+      jsonConfig.version = config.version
     }
     // Include toolConfig if it exists
     if (config.toolConfig) {

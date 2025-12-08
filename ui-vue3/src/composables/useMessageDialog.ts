@@ -1014,7 +1014,9 @@ export function useMessageDialog() {
       const [, readonlyRecord] = recordEntry
 
       // Convert readonly record to mutable for processing
-      const record = convertPlanExecutionRecord(readonlyRecord as PlanExecutionRecord) as PlanExecutionRecord
+      const record = convertPlanExecutionRecord(
+        readonlyRecord as PlanExecutionRecord
+      ) as PlanExecutionRecord
 
       console.log('[useMessageDialog] watchEffect: Updating message with plan record:', {
         dialogId: dialog.id,

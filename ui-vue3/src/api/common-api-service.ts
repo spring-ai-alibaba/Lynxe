@@ -124,7 +124,11 @@ export class CommonApiService {
   /**
    * Get version information
    */
-  public static async getVersion(): Promise<{ version: string; buildTime: string; timestamp: string }> {
+  public static async getVersion(): Promise<{
+    version: string
+    buildTime: string
+    timestamp: string
+  }> {
     try {
       const response = await fetch('/api/version')
       if (!response.ok) {
