@@ -23,6 +23,9 @@
 
 Lynxe is a Java implementation of Manus, currently used in many applications within Alibaba Group. It is primarily used for handling exploratory tasks that require a certain degree of determinism, such as quickly finding data from massive datasets and converting it into a single row in a database, or analyzing logs and issuing alerts.
 
+
+You can find some recommended Func-Agent implementations we've prepared at [Use Cases](https://github.com/Lynxe-public/Lynxe-public-prompts).
+
 Lynxe also provides HTTP service invocation capabilities, making it suitable for integration into existing projects. For details, please refer to the [developer quick start guide](./README-dev-en.md).
 
 ## 🎯 Lynxe Product Features

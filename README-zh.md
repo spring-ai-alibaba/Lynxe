@@ -19,6 +19,9 @@
 
 Lynxe 是 Manus 的一个 Java 实现，目前已经在阿里巴巴集团内的很多应用都有使用，主要用于处理需要有一定确定性要求的探索性任务，比如，快速从海量数据中找到数据并转换成数据库内的一行数据，或者分析日志并给出告警等。
 
+
+你可以从这里看到我们推荐的一些已经实现好的 Func-Agent 的[使用案例](https://github.com/Lynxe-public/Lynxe-public-prompts)。
+
 Lynxe 也提供了 http 的服务调用能力，适合被集成到既有的项目中。具体可以见[开发者快速入门 (中文)](./README-dev.md)
 
 ## 🎯 Lynxe 的产品特性
