@@ -9,13 +9,15 @@ description: |
   - Uses prepared statements with parameterized queries for SQL injection prevention
   - Use ? placeholders in query and provide parameters array for safe parameter binding
   - Supports all data types including strings, numbers, booleans, and null values
+  - Supports batch inserts: provide an array of arrays (each inner array is one row) for efficient multi-row inserts
 
   Examples:
-  - INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=["John", "john@example.com"]
+  - Single row INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=["John", "john@example.com"]
+  - Batch INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=[["John", "john@example.com"], ["Jane", "jane@example.com"], ["Bob", "bob@example.com"]]
   - UPDATE: query="UPDATE users SET email = ? WHERE id = ?", parameters=["newemail@example.com", 123]
   - DELETE: query="DELETE FROM users WHERE id = ?", parameters=[456]
 
-  Important: Always use ? placeholders and provide corresponding parameters array for data values.
+  Important: Always use ? placeholders and provide corresponding parameters array for data values. For batch inserts, provide an array of arrays where each inner array represents one row.
 
 parameters: |
   {
@@ -25,8 +27,8 @@ parameters: |
           "query": { "type": "string", "description": "SQL statement for write operations (INSERT, UPDATE, DELETE, ALTER, etc.). Use ? placeholders for parameterized queries." },
           "parameters": {
               "type": "array",
-              "description": "Optional array of parameter values for prepared statements. Values will be bound to ? placeholders in the query.",
-              "items": { "type": ["string", "number", "boolean", "null"] }
+              "description": "Optional array of parameter values for prepared statements. For single-row operations, provide a flat array: [val1, val2, ...]. For batch inserts, provide an array of arrays where each inner array is one row: [[val1, val2], [val3, val4], ...]. Values will be bound to ? placeholders in the query.",
+              "items": { "type": ["string", "number", "boolean", "null", "array"] }
           },
           "datasourceName": { "type": "string", "description": "Data source name, optional" }
       },
