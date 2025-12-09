@@ -448,14 +448,14 @@ const handleSubmit = async () => {
             // User confirms restart, reload the page
             window.location.reload()
           } else {
-            // User chooses to restart later, navigate to home page
-            router.push('/home')
+            // User chooses to restart later, navigate to direct page
+            router.push('/direct')
           }
         }, 2000)
       } else {
         // No restart needed, navigate directly
         setTimeout(() => {
-          router.push('/home')
+          router.push('/direct')
         }, 2000)
       }
     } else {
@@ -476,9 +476,9 @@ const checkInitStatus = async () => {
     const result = await response.json()
 
     if (result.success && result.initialized) {
-      // If already initialized, navigate to home page
+      // If already initialized, navigate to direct page
       localStorage.setItem('hasInitialized', 'true')
-      router.push('/home')
+      router.push('/direct')
     }
   } catch (err) {
     console.error('Check init status failed:', err)

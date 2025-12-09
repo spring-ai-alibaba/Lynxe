@@ -134,7 +134,8 @@ public class ParallelExecutionService {
 		Map<String, Object> filledParams = fillMissingParameters(params, requiredParamNames);
 
 		// Extract planDepth and toolCallId from context if available
-		// If toolCallId is provided in context, use it to ensure consistency with ActToolParam
+		// If toolCallId is provided in context, use it to ensure consistency with
+		// ActToolParam
 		// Otherwise, generate a new one for proper sub-plan association
 		Integer propagatedPlanDepth = null;
 		String toolCallId = null;
@@ -160,7 +161,8 @@ public class ParallelExecutionService {
 		}
 
 		// Generate a unique tool call ID if not provided in context
-		// This ensures each tool call has its own toolCallId for proper sub-plan association
+		// This ensures each tool call has its own toolCallId for proper sub-plan
+		// association
 		if (toolCallId == null) {
 			toolCallId = planIdDispatcher.generateToolCallId();
 		}
@@ -326,7 +328,8 @@ public class ParallelExecutionService {
 				contextMap.put("toolcallId", request.getToolCallId());
 				toolSpecificContext = new ToolContext(contextMap);
 			}
-			futures.add(executeTool(request.getToolName(), request.getParams(), toolCallbackMap, toolSpecificContext, i));
+			futures
+				.add(executeTool(request.getToolName(), request.getParams(), toolCallbackMap, toolSpecificContext, i));
 		}
 
 		return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenApply(v -> {

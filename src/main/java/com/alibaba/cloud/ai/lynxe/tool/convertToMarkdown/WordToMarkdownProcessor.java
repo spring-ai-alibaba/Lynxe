@@ -112,8 +112,8 @@ public class WordToMarkdownProcessor {
 	}
 
 	/**
-	 * Extract content from Word document using Apache POI
-	 * Processes both paragraphs and tables in document order
+	 * Extract content from Word document using Apache POI Processes both paragraphs and
+	 * tables in document order
 	 */
 	private String extractWordContent(Path sourceFile, String currentPlanId) {
 		try (FileInputStream fis = new FileInputStream(sourceFile.toFile());
@@ -126,8 +126,9 @@ public class WordToMarkdownProcessor {
 			// Process all body elements (paragraphs and tables) in document order
 			// Note: XWPFDocument doesn't provide direct access to body elements in order,
 			// so we process paragraphs and tables separately
-			// For better ordering, we would need to use document.getBodyElements() if available
-			
+			// For better ordering, we would need to use document.getBodyElements() if
+			// available
+
 			// Process all paragraphs
 			List<XWPFParagraph> paragraphs = document.getParagraphs();
 			for (XWPFParagraph paragraph : paragraphs) {

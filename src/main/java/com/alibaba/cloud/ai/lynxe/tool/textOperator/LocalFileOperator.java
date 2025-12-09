@@ -696,7 +696,8 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 
 	/**
 	 * Search for text patterns in file (grep functionality)
-	 * @param contextLines Number of context lines to show above and below each match (0 = no context)
+	 * @param contextLines Number of context lines to show above and below each match (0 =
+	 * no context)
 	 */
 	private ToolExecuteResult grepText(String filePath, String pattern, boolean caseSensitive, boolean wholeWord,
 			int contextLines) {
@@ -744,7 +745,8 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 			}
 			result.append("=".repeat(60)).append("\n");
 
-			// Track which lines have been printed to avoid duplicates when showing context
+			// Track which lines have been printed to avoid duplicates when showing
+			// context
 			java.util.Set<Integer> printedLines = new java.util.HashSet<>();
 			int matchCount = 0;
 

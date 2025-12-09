@@ -87,7 +87,8 @@ public class PlanFinalizer {
 		String resultStr = context.getPlan().getResult();
 		MessageExtractionResult extractionResult = extractMessageFromJsonIfApplicable(resultStr);
 
-		// If we successfully extracted a simple text message, use it directly without calling LLM
+		// If we successfully extracted a simple text message, use it directly without
+		// calling LLM
 		if (extractionResult != null && extractionResult.isSimpleText()) {
 			log.debug("Using message from resultStr directly, skipping LLM call");
 			processAndRecordResult(context, result, extractionResult.getMessage(), "Generated summary: {}");
@@ -259,7 +260,8 @@ public class PlanFinalizer {
 				processedResult = extractionResult.getMessage();
 			}
 			else {
-				// Use original LLM result if extraction failed or returned structured data
+				// Use original LLM result if extraction failed or returned structured
+				// data
 				processedResult = llmResult;
 			}
 			processAndRecordResult(context, result, processedResult, successLogTemplate);
@@ -273,8 +275,11 @@ public class PlanFinalizer {
 	 * Result of message extraction from JSON
 	 */
 	private static class MessageExtractionResult {
+
 		private final String message;
+
 		private final String structuredData;
+
 		private final boolean isSimpleText;
 
 		public MessageExtractionResult(String message, boolean isSimpleText) {
@@ -304,13 +309,14 @@ public class PlanFinalizer {
 		public boolean isStructuredData() {
 			return structuredData != null;
 		}
+
 	}
 
 	/**
 	 * Extract message from JSON response if output only contains message key
 	 * @param jsonString The JSON string to parse (may be JSON or plain text)
-	 * @return Extracted message result if applicable, null if extraction failed or doesn't match
-	 * expected structure
+	 * @return Extracted message result if applicable, null if extraction failed or
+	 * doesn't match expected structure
 	 */
 	private MessageExtractionResult extractMessageFromJsonIfApplicable(String jsonString) {
 		if (jsonString == null || jsonString.trim().isEmpty()) {
@@ -349,16 +355,20 @@ public class PlanFinalizer {
 					log.debug("Extracted text message from JSON: {}", message);
 					return new MessageExtractionResult(message, true);
 				}
-				// If message is an array of objects, return structured data for LLM summary generation
+				// If message is an array of objects, return structured data for LLM
+				// summary generation
 				else if (messageNode.isArray()) {
 					String structuredDataJson = objectMapper.writeValueAsString(messageNode);
-					log.debug("Found structured data (array) in message, will generate summary: {}", structuredDataJson);
+					log.debug("Found structured data (array) in message, will generate summary: {}",
+							structuredDataJson);
 					return new MessageExtractionResult(structuredDataJson);
 				}
-				// If message is an object, return structured data for LLM summary generation
+				// If message is an object, return structured data for LLM summary
+				// generation
 				else if (messageNode.isObject()) {
 					String structuredDataJson = objectMapper.writeValueAsString(messageNode);
-					log.debug("Found structured data (object) in message, will generate summary: {}", structuredDataJson);
+					log.debug("Found structured data (object) in message, will generate summary: {}",
+							structuredDataJson);
 					return new MessageExtractionResult(structuredDataJson);
 				}
 			}

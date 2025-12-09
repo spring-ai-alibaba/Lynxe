@@ -36,9 +36,8 @@ export const routes: Readonly<RouteRecordType[]> = [
         return '/init'
       }
 
-      // Check if user has visited the homepage before
-      const hasVisited = localStorage.getItem('hasVisitedHome') === 'true'
-      return hasVisited ? '/direct' : '/home'
+      // Always redirect to direct page after initialization
+      return '/direct'
     },
     meta: {
       skip: true,
@@ -51,15 +50,6 @@ export const routes: Readonly<RouteRecordType[]> = [
         meta: {
           fullscreen: true,
           skip: true,
-        },
-      },
-      {
-        path: '/home',
-        name: 'conversation',
-        component: () => import('../views/home/index.vue'),
-        meta: {
-          icon: 'carbon:chat',
-          fullscreen: true,
         },
       },
       {

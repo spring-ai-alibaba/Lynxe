@@ -404,12 +404,12 @@ public class ChromeDriverService implements IChromeDriverService {
 			try {
 				String browserPath = System.getProperty("playwright.browsers.path");
 				if (browserPath != null) {
-				java.nio.file.Path browsersDir = java.nio.file.Paths.get(browserPath);
-				if (!java.nio.file.Files.exists(browsersDir)) {
-					log.debug(
-							"Browser binaries directory does not exist: {}. Playwright will download browsers on first use.",
-							browserPath);
-				}
+					java.nio.file.Path browsersDir = java.nio.file.Paths.get(browserPath);
+					if (!java.nio.file.Files.exists(browsersDir)) {
+						log.debug(
+								"Browser binaries directory does not exist: {}. Playwright will download browsers on first use.",
+								browserPath);
+					}
 					else {
 						log.debug("Browser binaries directory exists: {}", browserPath);
 					}
@@ -673,7 +673,8 @@ public class ChromeDriverService implements IChromeDriverService {
 				// Note: This event fires both on normal close and unexpected crashes
 				if (browser != null) {
 					browser.onDisconnected((Browser disconnectedBrowser) -> {
-						// Use DEBUG level since this is expected during normal browser shutdown
+						// Use DEBUG level since this is expected during normal browser
+						// shutdown
 						log.debug("Browser disconnected for planId: {}", findPlanIdForBrowser(disconnectedBrowser));
 						// Mark driver as unhealthy for this planId
 						String disconnectedPlanId = findPlanIdForBrowser(disconnectedBrowser);

@@ -27,9 +27,6 @@
         </div>
         <div class="branding-actions">
           <LanguageSwitcher />
-          <button class="back-button" @click="goBack">
-            <Icon icon="carbon:arrow-left" />
-          </button>
           <button class="config-button" @click="handleConfig" :title="$t('direct.configuration')">
             <Icon icon="carbon:settings-adjust" width="20" />
           </button>
@@ -493,10 +490,6 @@ const handleStepSelected = (stepId: string) => {
   } else {
     console.warn('[DirectView] rightPanelRef.handleStepSelected method not available')
   }
-}
-
-const goBack = () => {
-  router.push('/home')
 }
 
 const handleConfig = () => {
