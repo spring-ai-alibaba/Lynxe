@@ -13,32 +13,5 @@ description: |
   - 错误处理和验证
 
 parameters: |
-  {
-      "type": "object",
-      "properties": {
-          "action": {
-              "type": "string",
-              "enum": ["ls", "list", "cp", "copy"],
-              "description": "要执行的操作：ls/list 用于列出文件，cp/copy 用于复制文件"
-          },
-          "source_path": {
-              "type": "string",
-              "description": "操作的源路径（所有操作都需要）"
-          },
-          "target_path": {
-              "type": "string",
-              "description": "复制操作的目标路径（复制操作需要）"
-          },
-          "recursive": {
-              "type": "boolean",
-              "default": false,
-              "description": "是否执行递归操作（用于列出目录）"
-          },
-          "file_pattern": {
-              "type": "string",
-              "description": "用于按名称过滤文件的正则表达式模式"
-          }
-      },
-      "required": ["action", "source_path"]
-  }
+  {"type":"object","properties":{"action":{"type":"string","enum":["ls","list","cp","copy"],"description":"要执行的操作：ls/list 用于列出文件，cp/copy 用于复制文件"},"source_path":{"type":"string","description":"操作的源路径（所有操作都需要）"},"target_path":{"type":"string","description":"复制操作的目标路径（复制操作需要）"},"recursive":{"type":"boolean","default":false,"description":"是否执行递归操作（用于列出目录）"},"file_pattern":{"type":"string","description":"用于按名称过滤文件的正则表达式模式"}},"required":["action","source_path"]}
 
