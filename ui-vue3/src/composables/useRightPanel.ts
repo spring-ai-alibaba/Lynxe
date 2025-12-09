@@ -255,7 +255,7 @@ export function useRightPanel() {
    * @param rootPlanId - The root plan ID to update (deprecated, kept for compatibility)
    */
   const updateDisplayedPlanProgress = (rootPlanId: string): void => {
-    console.log('[useRightPanel] updateDisplayedPlanProgress called with rootPlanId:', rootPlanId)
+    // console.log('[useRightPanel] updateDisplayedPlanProgress called with rootPlanId:', rootPlanId)
     // No-op: currentRootPlanId is now reactively derived from useMessageDialog
   }
 
