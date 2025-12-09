@@ -97,10 +97,18 @@ export interface ThinkActRecord {
   /** Output character count (total characters in LLM response) */
   outputCharCount?: number
 
-  /** Tool name used for action (if applicable) */
+  /**
+   * @deprecated This field is abandoned and kept only for database compatibility.
+   * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+   * Tool name used for action (if applicable)
+   */
   toolName?: string
 
-  /** Tool parameters used for action (serialized, if applicable) */
+  /**
+   * @deprecated This field is abandoned and kept only for database compatibility.
+   * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+   * Tool parameters used for action (serialized, if applicable)
+   */
   toolParameters?: string
 
   /** Tool call information */
