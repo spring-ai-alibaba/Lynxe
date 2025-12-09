@@ -15,32 +15,11 @@
  */
 package com.alibaba.cloud.ai.lynxe.tool.browser;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.alibaba.cloud.ai.lynxe.config.LynxeProperties;
 import com.alibaba.cloud.ai.lynxe.tool.AbstractBaseTool;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.BrowserRequestVO;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.ClickByElementAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.CloseTabAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.ExecuteJsAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.GetElementPositionByNameAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.GetTextAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.InputTextAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.KeyEnterAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.MoveToAndClickAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.NavigateAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.NewTabAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.RefreshAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.ScreenShotAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.ScrollAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.SwitchTabAction;
-import com.alibaba.cloud.ai.lynxe.tool.browser.actions.WriteCurrentWebContentAction;
+import com.alibaba.cloud.ai.lynxe.tool.browser.actions.*;
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
+import com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager;
 import com.alibaba.cloud.ai.lynxe.tool.i18n.ToolI18nService;
 import com.alibaba.cloud.ai.lynxe.tool.innerStorage.SmartContentSavingService;
 import com.alibaba.cloud.ai.lynxe.tool.textOperator.TextFileService;
@@ -48,6 +27,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.PlaywrightException;
 import com.microsoft.playwright.TimeoutError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 
@@ -65,15 +50,19 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 
 	private final ToolI18nService toolI18nService;
 
+	private final UnifiedDirectoryManager unifiedDirectoryManager;
+
 	public BrowserUseTool(ChromeDriverService chromeDriverService, SmartContentSavingService innerStorageService,
 			ObjectMapper objectMapper, com.alibaba.cloud.ai.lynxe.tool.shortUrl.ShortUrlService shortUrlService,
-			TextFileService textFileService, ToolI18nService toolI18nService) {
+			TextFileService textFileService, ToolI18nService toolI18nService,
+			UnifiedDirectoryManager unifiedDirectoryManager) {
 		this.chromeDriverService = chromeDriverService;
 		this.innerStorageService = innerStorageService;
 		this.objectMapper = objectMapper;
 		this.shortUrlService = shortUrlService;
 		this.textFileService = textFileService;
 		this.toolI18nService = toolI18nService;
+		this.unifiedDirectoryManager = unifiedDirectoryManager;
 	}
 
 	public DriverWrapper getDriver() {
@@ -107,9 +96,9 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 	public static synchronized BrowserUseTool getInstance(ChromeDriverService chromeDriverService,
 			SmartContentSavingService innerStorageService, ObjectMapper objectMapper,
 			com.alibaba.cloud.ai.lynxe.tool.shortUrl.ShortUrlService shortUrlService, TextFileService textFileService,
-			ToolI18nService toolI18nService) {
+			ToolI18nService toolI18nService, UnifiedDirectoryManager unifiedDirectoryManager) {
 		BrowserUseTool instance = new BrowserUseTool(chromeDriverService, innerStorageService, objectMapper,
-				shortUrlService, textFileService, toolI18nService);
+				shortUrlService, textFileService, toolI18nService, unifiedDirectoryManager);
 		return instance;
 	}
 
@@ -243,6 +232,21 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 						result = executeActionWithRetry(
 								() -> new WriteCurrentWebContentAction(this, textFileService).execute(requestVO),
 								action);
+						break;
+					}
+					case "download": {
+						// Get download directory for current plan
+						java.nio.file.Path downloadDir = unifiedDirectoryManager.getRootPlanDirectory(rootPlanId)
+							.resolve("downloads");
+						try {
+							unifiedDirectoryManager.ensureDirectoryExists(downloadDir);
+						}
+						catch (java.io.IOException e) {
+							log.error("Failed to create download directory: {}", e.getMessage());
+							return new ToolExecuteResult("Failed to create download directory: " + e.getMessage());
+						}
+						result = executeActionWithRetry(
+								() -> new DownloadFileAction(this, downloadDir).execute(requestVO), action);
 						break;
 					}
 					default:
@@ -427,11 +431,11 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 				try {
 					page.waitForLoadState(com.microsoft.playwright.options.LoadState.NETWORKIDLE,
 							new Page.WaitForLoadStateOptions().setTimeout(3000)); // 3
-																					// second
-																					// timeout
-																					// for
-																					// network
-																					// idle
+					// second
+					// timeout
+					// for
+					// network
+					// idle
 				}
 				catch (TimeoutError e) {
 					// If network idle timeout, wait a bit more for dynamic content to
@@ -509,8 +513,8 @@ public class BrowserUseTool extends AbstractBaseTool<BrowserRequestVO> {
 				// Use compressUrl based on configuration
 				Boolean enableShortUrl = getLynxeProperties().getEnableShortUrl();
 				boolean compressUrl = enableShortUrl != null ? enableShortUrl : true; // Default
-																						// to
-																						// true
+				// to
+				// true
 				String snapshot = AriaElementHelper.parsePageAndAssignRefs(page, snapshotOptions, compressUrl,
 						shortUrlService, rootPlanId);
 				if (snapshot != null && !snapshot.trim().isEmpty()) {
