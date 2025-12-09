@@ -856,8 +856,8 @@ public class DynamicAgent extends ReActAgent {
 				if ("SUCCESS".equals(status)) {
 					Object outputObj = result.get("output");
 					processedResult = (outputObj != null) ? processToolResult(outputObj.toString()) : "No output";
-				}
-				else {
+						}
+						else {
 					Object errorObj = result.get("error");
 					processedResult = "Error: " + (errorObj != null ? errorObj.toString() : "Unknown error");
 				}

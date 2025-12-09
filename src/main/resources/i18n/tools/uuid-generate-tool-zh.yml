@@ -13,4 +13,3 @@ parameters: |
       "required": ["action"],
       "additionalProperties": false
   }
-

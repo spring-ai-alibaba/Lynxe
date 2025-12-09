@@ -21,6 +21,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
 import com.alibaba.cloud.ai.lynxe.tool.database.DataSourceService;
 import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseRequest;
@@ -28,8 +31,6 @@ import com.alibaba.cloud.ai.lynxe.tool.database.meta.ColumnMeta;
 import com.alibaba.cloud.ai.lynxe.tool.database.meta.TableMeta;
 import com.alibaba.cloud.ai.lynxe.tool.database.sql.DatabaseSqlGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class GetTableNameAction extends AbstractDatabaseAction {
 
@@ -61,7 +62,10 @@ public class GetTableNameAction extends AbstractDatabaseAction {
 		try (Connection conn = datasourceName != null && !datasourceName.trim().isEmpty()
 				? dataSourceService.getConnection(datasourceName) : dataSourceService.getConnection();
 				PreparedStatement ps = conn.prepareStatement(sql)) {
-			ps.setString(1, "%" + text + "%");
+			// Set parameters for fuzzy search: both TABLE_NAME and TABLE_COMMENT LIKE conditions
+			String searchPattern = "%" + text + "%";
+			ps.setString(1, searchPattern);
+			ps.setString(2, searchPattern);
 			try (ResultSet rs = ps.executeQuery()) {
 				List<TableMeta> tableMetaList = new java.util.ArrayList<>();
 				while (rs.next()) {

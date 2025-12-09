@@ -138,7 +138,7 @@ public class SpringBootPlaywrightInitializer {
 			}
 		}
 		else {
-			log.warn("Playwright browsers not found at: {}. They will be downloaded on first use.", browserPath);
+			log.debug("Playwright browsers not found at: {}. They will be downloaded on first use.", browserPath);
 		}
 
 		log.info("Spring Boot Playwright environment configured:");
