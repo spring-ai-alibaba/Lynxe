@@ -13,6 +13,7 @@ description: |
   - 'close_tab': 关闭指定标签页（默认关闭当前标签页）
   - 'switch_tab': 切换到特定标签页
   - 'get_web_content': 获取当前页面 ARIA 快照内容
+  - 'download': 点击下载链接并保存文件到指定目录
 
   注意：浏览器操作有超时配置，默认为 30 秒。
 
@@ -180,6 +181,21 @@ parameters: |
                   }
               },
               "required": ["action"],
+              "additionalProperties": false
+          },
+          {
+              "type": "object",
+              "properties": {
+                  "action": {
+                      "type": "string",
+                      "const": "download"
+                  },
+                  "index": {
+                      "type": "integer",
+                      "description": "要点击的下载链接或按钮的元素索引。这对应于每个交互元素在 ARIA 快照中显示的 idx 值（例如，idx=39）。"
+                  }
+              },
+              "required": ["action", "index"],
               "additionalProperties": false
           }
       ]

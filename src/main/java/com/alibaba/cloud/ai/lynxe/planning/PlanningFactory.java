@@ -16,33 +16,6 @@
 
 package com.alibaba.cloud.ai.lynxe.planning;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.hc.client5.http.classic.HttpClient;
-import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.util.Timeout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.ai.model.tool.ToolCallingManager;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.ai.tool.metadata.ToolMetadata;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-
 import com.alibaba.cloud.ai.lynxe.agent.ToolCallbackProvider;
 import com.alibaba.cloud.ai.lynxe.config.LynxeProperties;
 import com.alibaba.cloud.ai.lynxe.cron.service.CronService;
@@ -71,12 +44,7 @@ import com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.ImageOcrProcessor;
 import com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.MarkdownConverterTool;
 import com.alibaba.cloud.ai.lynxe.tool.convertToMarkdown.PdfOcrProcessor;
 import com.alibaba.cloud.ai.lynxe.tool.cron.CronTool;
-import com.alibaba.cloud.ai.lynxe.tool.database.DataSourceService;
-import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseMetadataTool;
-import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseReadTool;
-import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseTableToExcelTool;
-import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseWriteTool;
-import com.alibaba.cloud.ai.lynxe.tool.database.UuidGenerateTool;
+import com.alibaba.cloud.ai.lynxe.tool.database.*;
 import com.alibaba.cloud.ai.lynxe.tool.dirOperator.DirectoryOperator;
 import com.alibaba.cloud.ai.lynxe.tool.excelProcessor.IExcelProcessingService;
 import com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager;
@@ -94,6 +62,32 @@ import com.alibaba.cloud.ai.lynxe.tool.textOperator.GlobalFileOperator;
 import com.alibaba.cloud.ai.lynxe.tool.textOperator.TextFileService;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.util.Timeout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.model.tool.ToolCallingManager;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.tool.metadata.ToolMetadata;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author yuluo
@@ -250,7 +244,7 @@ public class PlanningFactory {
 		if (agentInit) {
 			// Add all tool definitions
 			toolDefinitions.add(BrowserUseTool.getInstance(chromeDriverService, innerStorageService, objectMapper,
-					shortUrlService, textFileService, toolI18nService));
+					shortUrlService, textFileService, toolI18nService, unifiedDirectoryManager));
 			toolDefinitions.add(DatabaseReadTool.getInstance(dataSourceService, objectMapper, unifiedDirectoryManager,
 					toolI18nService));
 			toolDefinitions.add(DatabaseWriteTool.getInstance(dataSourceService, objectMapper, toolI18nService));
@@ -347,7 +341,7 @@ public class PlanningFactory {
 		// Add subplan tool registration
 		if (subplanToolService != null) {
 			try {
-				Map<String, PlanningFactory.ToolCallBackContext> subplanToolCallbacks = subplanToolService
+				Map<String, ToolCallBackContext> subplanToolCallbacks = subplanToolService
 					.createSubplanToolCallbacks(planId, rootPlanId, expectedReturnInfo, serviceGroupIndexService);
 				toolCallbackMap.putAll(subplanToolCallbacks);
 				log.info("Registered {} subplan tools", subplanToolCallbacks.size());
@@ -366,7 +360,7 @@ public class PlanningFactory {
 		// Create RequestConfig and set the timeout (10 minutes for all timeouts)
 		RequestConfig requestConfig = RequestConfig.custom()
 			.setConnectTimeout(Timeout.of(10, TimeUnit.MINUTES)) // Set the connection
-																	// timeout
+			// timeout
 			.setResponseTimeout(Timeout.of(10, TimeUnit.MINUTES))
 			.setConnectionRequestTimeout(Timeout.of(10, TimeUnit.MINUTES))
 			.build();
@@ -388,7 +382,7 @@ public class PlanningFactory {
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(name = "spring.ai.mcp.client.enabled", havingValue = "false")
 	public ToolCallbackProvider emptyToolCallbackProvider() {
-		return () -> new HashMap<String, PlanningFactory.ToolCallBackContext>();
+		return () -> new HashMap<String, ToolCallBackContext>();
 	}
 
 }
