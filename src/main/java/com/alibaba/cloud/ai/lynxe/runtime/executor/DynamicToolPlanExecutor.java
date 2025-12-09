@@ -41,10 +41,10 @@ import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.ExecutionContext;
 import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.ExecutionStep;
 import com.alibaba.cloud.ai.lynxe.runtime.service.AgentInterruptionHelper;
 import com.alibaba.cloud.ai.lynxe.runtime.service.FileUploadService;
-import com.alibaba.cloud.ai.lynxe.runtime.service.ParallelToolExecutionService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.PlanIdDispatcher;
 import com.alibaba.cloud.ai.lynxe.runtime.service.ServiceGroupIndexService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.UserInputService;
+import com.alibaba.cloud.ai.lynxe.tool.mapreduce.ParallelExecutionService;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -80,7 +80,7 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 
 	private final ObjectMapper objectMapper;
 
-	private final ParallelToolExecutionService parallelToolExecutionService;
+	private final ParallelExecutionService parallelExecutionService;
 
 	private final MemoryService memoryService;
 
@@ -95,7 +95,7 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 			ToolCallingManager toolCallingManager, UserInputService userInputService,
 			StreamingResponseHandler streamingResponseHandler, PlanIdDispatcher planIdDispatcher,
 			LynxeEventPublisher lynxeEventPublisher, ObjectMapper objectMapper,
-			ParallelToolExecutionService parallelToolExecutionService, MemoryService memoryService,
+			ParallelExecutionService parallelExecutionService, MemoryService memoryService,
 			ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		super(agents, recorder, llmService, lynxeProperties, levelBasedExecutorPool, fileUploadService,
@@ -107,7 +107,7 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 		this.planIdDispatcher = planIdDispatcher;
 		this.lynxeEventPublisher = lynxeEventPublisher;
 		this.objectMapper = objectMapper;
-		this.parallelToolExecutionService = parallelToolExecutionService;
+		this.parallelExecutionService = parallelExecutionService;
 		this.memoryService = memoryService;
 		this.conversationMemoryLimitService = conversationMemoryLimitService;
 		this.serviceGroupIndexService = serviceGroupIndexService;
@@ -167,7 +167,7 @@ public class DynamicToolPlanExecutor extends AbstractPlanExecutor {
 		ConfigurableDynaAgent agent = new ConfigurableDynaAgent(llmService, getRecorder(), lynxeProperties, name,
 				description, nextStepPrompt, selectedToolKeys, toolCallingManager, initialAgentSetting,
 				userInputService, modelName, streamingResponseHandler, step, planIdDispatcher, lynxeEventPublisher,
-				agentInterruptionHelper, objectMapper, parallelToolExecutionService, memoryService,
+				agentInterruptionHelper, objectMapper, parallelExecutionService, memoryService,
 				conversationMemoryLimitService, serviceGroupIndexService);
 
 		agent.setCurrentPlanId(planId);

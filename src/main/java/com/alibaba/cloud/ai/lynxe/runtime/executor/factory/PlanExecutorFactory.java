@@ -34,10 +34,10 @@ import com.alibaba.cloud.ai.lynxe.runtime.executor.LevelBasedExecutorPool;
 import com.alibaba.cloud.ai.lynxe.runtime.executor.PlanExecutorInterface;
 import com.alibaba.cloud.ai.lynxe.runtime.service.AgentInterruptionHelper;
 import com.alibaba.cloud.ai.lynxe.runtime.service.FileUploadService;
-import com.alibaba.cloud.ai.lynxe.runtime.service.ParallelToolExecutionService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.PlanIdDispatcher;
 import com.alibaba.cloud.ai.lynxe.runtime.service.ServiceGroupIndexService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.UserInputService;
+import com.alibaba.cloud.ai.lynxe.tool.mapreduce.ParallelExecutionService;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -79,7 +79,7 @@ public class PlanExecutorFactory implements IPlanExecutorFactory {
 
 	private final LynxeEventPublisher lynxeEventPublisher;
 
-	private final ParallelToolExecutionService parallelToolExecutionService;
+	private final ParallelExecutionService parallelExecutionService;
 
 	private final MemoryService memoryService;
 
@@ -93,7 +93,7 @@ public class PlanExecutorFactory implements IPlanExecutorFactory {
 			AgentInterruptionHelper agentInterruptionHelper, PlanningFactory planningFactory,
 			ToolCallingManager toolCallingManager, UserInputService userInputService,
 			StreamingResponseHandler streamingResponseHandler, PlanIdDispatcher planIdDispatcher,
-			LynxeEventPublisher lynxeEventPublisher, ParallelToolExecutionService parallelToolExecutionService,
+			LynxeEventPublisher lynxeEventPublisher, ParallelExecutionService parallelExecutionService,
 			MemoryService memoryService, ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		this.llmService = llmService;
@@ -110,7 +110,7 @@ public class PlanExecutorFactory implements IPlanExecutorFactory {
 		this.streamingResponseHandler = streamingResponseHandler;
 		this.planIdDispatcher = planIdDispatcher;
 		this.lynxeEventPublisher = lynxeEventPublisher;
-		this.parallelToolExecutionService = parallelToolExecutionService;
+		this.parallelExecutionService = parallelExecutionService;
 		this.memoryService = memoryService;
 		this.conversationMemoryLimitService = conversationMemoryLimitService;
 		this.serviceGroupIndexService = serviceGroupIndexService;
@@ -125,7 +125,7 @@ public class PlanExecutorFactory implements IPlanExecutorFactory {
 		return new DynamicToolPlanExecutor(null, recorder, llmService, lynxeProperties, levelBasedExecutorPool,
 				dynamicModelRepository, fileUploadService, agentInterruptionHelper, planningFactory, toolCallingManager,
 				userInputService, streamingResponseHandler, planIdDispatcher, lynxeEventPublisher, objectMapper,
-				parallelToolExecutionService, memoryService, conversationMemoryLimitService, serviceGroupIndexService);
+				parallelExecutionService, memoryService, conversationMemoryLimitService, serviceGroupIndexService);
 	}
 
 	/**
