@@ -735,7 +735,7 @@ const cancelDelete = () => {
   font-size: 14px;
   font-weight: 600;
   color: white;
-  margin-bottom: 4px;
+  margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -744,7 +744,7 @@ const cancelDelete = () => {
 .task-time {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.5);
-  margin-left: 8px;
+  margin-top: 3px;
   flex-shrink: 0;
   position: absolute;
   top: 12px;

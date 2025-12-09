@@ -54,17 +54,15 @@
           class="agent-step-item"
           :class="getAgentPreviewStatusClass(agent.status)"
           @click="handleSubPlanAgentClick(agentIndex, agent)"
+          :title="
+            agent.agentName === 'ConfigurableDynaAgent'
+              ? $t('chat.clickToViewExecutionDetails')
+              : ''
+          "
         >
           <div class="agent-step-header">
             <Icon :icon="getAgentPreviewStatusIcon(agent.status)" class="agent-icon" />
-            <span
-              class="agent-name"
-              :title="
-                agent.agentName === 'ConfigurableDynaAgent'
-                  ? $t('chat.clickToViewExecutionDetails')
-                  : ''
-              "
-            >
+            <span class="agent-name">
               {{
                 agent.agentName === 'ConfigurableDynaAgent'
                   ? $t('chat.funcAgentExecutionDetails')
