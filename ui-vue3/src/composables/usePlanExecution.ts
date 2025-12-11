@@ -129,9 +129,9 @@ export function usePlanExecution() {
     if (!planId) return
 
     try {
-      console.log('[usePlanExecution] Polling plan status for:', planId)
+      // console.log('[usePlanExecution] Polling plan status for:', planId)
       const details = await CommonApiService.getDetails(planId)
-      console.log('[usePlanExecution] Received plan details:', details ? 'YES' : 'NO', details)
+      // console.log('[usePlanExecution] Received plan details:', details ? 'YES' : 'NO', details)
 
       // Reset retry attempts on successful fetch
       planRetryAttempts.delete(planId)
@@ -193,15 +193,15 @@ export function usePlanExecution() {
         console.log('[usePlanExecution] Stored record with both keys:', { planId, recordKey })
       }
 
-      console.log('[usePlanExecution] Updated plan execution record:', {
-        planId,
-        recordKey,
-        rootPlanId: details.rootPlanId,
-        currentPlanId: details.currentPlanId,
-        completed: details.completed,
-        status: details.status,
-        attempt: currentAttempts + 1,
-      })
+      // console.log('[usePlanExecution] Updated plan execution record:', {
+      //   planId,
+      //   recordKey,
+      //   rootPlanId: details.rootPlanId,
+      //   currentPlanId: details.currentPlanId,
+      //   completed: details.completed,
+      //   status: details.status,
+      //   attempt: currentAttempts + 1,
+      // })
 
       // Handle completion - continue polling to ensure summary is fetched
       if (details.completed) {

@@ -57,10 +57,129 @@ public class ExecuteSqlAction extends AbstractDatabaseAction {
 	}
 
 	/**
-	 * Execute SQL using prepared statements with parameters
+	 * Execute SQL using prepared statements with parameters Supports both single-row and
+	 * batch (multi-row) inserts
 	 */
 	private ToolExecuteResult executePreparedStatement(String query, List<Object> parameters, String datasourceName,
 			DataSourceService dataSourceService) {
+		// Check if this is a batch insert (parameters is a list of lists)
+		boolean isBatchMode = isBatchParameters(parameters);
+
+		if (isBatchMode) {
+			return executeBatchPreparedStatement(query, parameters, datasourceName, dataSourceService);
+		}
+		else {
+			return executeSingleRowPreparedStatement(query, parameters, datasourceName, dataSourceService);
+		}
+	}
+
+	/**
+	 * Check if parameters represent a batch (list of lists) or single row (flat list)
+	 */
+	private boolean isBatchParameters(List<Object> parameters) {
+		if (parameters == null || parameters.isEmpty()) {
+			return false;
+		}
+		// Check if first element is a List (indicating batch mode)
+		Object firstElement = parameters.get(0);
+		return firstElement instanceof List<?>;
+	}
+
+	/**
+	 * Execute batch prepared statement (multi-row insert)
+	 */
+	@SuppressWarnings("unchecked")
+	private ToolExecuteResult executeBatchPreparedStatement(String query, List<Object> parameters,
+			String datasourceName, DataSourceService dataSourceService) {
+		// Validate that all elements are lists
+		int placeholderCount = countPlaceholders(query);
+		List<List<Object>> batchParameters = new ArrayList<>();
+
+		for (Object param : parameters) {
+			if (!(param instanceof List)) {
+				String errorMsg = String.format(
+						"Batch mode requires all parameters to be lists. Found non-list parameter at index %d",
+						parameters.indexOf(param));
+				log.error("ExecuteSqlAction batch validation failed: {}", errorMsg);
+				return new ToolExecuteResult("Datasource: " + (datasourceName != null ? datasourceName : "default")
+						+ "\nError: " + errorMsg);
+			}
+
+			List<Object> rowParams = (List<Object>) param;
+			if (rowParams.size() != placeholderCount) {
+				String errorMsg = String.format(
+						"Parameter count mismatch in batch row %d: SQL query has %d placeholder(s) (?), but %d parameter(s) provided in this row.",
+						batchParameters.size(), placeholderCount, rowParams.size());
+				log.error("ExecuteSqlAction batch row validation failed: {}", errorMsg);
+				return new ToolExecuteResult("Datasource: " + (datasourceName != null ? datasourceName : "default")
+						+ "\nError: " + errorMsg);
+			}
+			batchParameters.add(rowParams);
+		}
+
+		if (batchParameters.isEmpty()) {
+			return new ToolExecuteResult("Datasource: " + (datasourceName != null ? datasourceName : "default")
+					+ "\nError: No batch rows provided");
+		}
+
+		List<String> results = new ArrayList<>();
+		try (Connection conn = datasourceName != null && !datasourceName.trim().isEmpty()
+				? dataSourceService.getConnection(datasourceName) : dataSourceService.getConnection();
+				PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+			// Add each row to the batch
+			for (List<Object> rowParams : batchParameters) {
+				// Set parameters for this row
+				for (int i = 0; i < rowParams.size(); i++) {
+					Object param = rowParams.get(i);
+					if (param == null) {
+						pstmt.setNull(i + 1, java.sql.Types.NULL);
+					}
+					else {
+						pstmt.setObject(i + 1, param);
+					}
+				}
+				// Add to batch
+				pstmt.addBatch();
+			}
+
+			log.info("Executing batch prepared statement with {} rows, {} parameters per row", batchParameters.size(),
+					placeholderCount);
+
+			// Execute batch
+			int[] updateCounts = pstmt.executeBatch();
+
+			// Calculate total affected rows
+			int totalAffectedRows = 0;
+			for (int count : updateCounts) {
+				if (count >= 0) {
+					totalAffectedRows += count;
+				}
+			}
+
+			results.add(String.format("Batch execution successful. %d row(s) processed, %d row(s) affected",
+					batchParameters.size(), totalAffectedRows));
+
+			log.info(
+					"ExecuteSqlAction (batch prepared) completed successfully, datasourceName={}, rows={}, affected={}",
+					datasourceName, batchParameters.size(), totalAffectedRows);
+			String resultContent = "Datasource: " + (datasourceName != null ? datasourceName : "default") + "\n"
+					+ String.join("\n---\n", results);
+			return new ToolExecuteResult(resultContent);
+		}
+		catch (SQLException e) {
+			log.error("ExecuteSqlAction (batch prepared) failed with SQLException, datasourceName={}, error={}",
+					datasourceName, e.getMessage(), e);
+			return new ToolExecuteResult("Datasource: " + (datasourceName != null ? datasourceName : "default")
+					+ "\nBatch prepared SQL execution failed: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Execute single-row prepared statement
+	 */
+	private ToolExecuteResult executeSingleRowPreparedStatement(String query, List<Object> parameters,
+			String datasourceName, DataSourceService dataSourceService) {
 		// Validate parameter count matches placeholder count
 		int placeholderCount = countPlaceholders(query);
 		if (placeholderCount != parameters.size()) {

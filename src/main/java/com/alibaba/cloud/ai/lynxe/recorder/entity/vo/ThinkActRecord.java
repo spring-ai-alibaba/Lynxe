@@ -18,6 +18,8 @@ package com.alibaba.cloud.ai.lynxe.recorder.entity.vo;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonSerializable;
+
 /**
  * Records the thinking and action process of an agent in a single execution step. Exists
  * as a sub-step of AgentExecutionRecord, focusing on recording processing messages during
@@ -98,9 +100,15 @@ public class ThinkActRecord {
 	private Integer outputCharCount;
 
 	// Tool name used for action (if applicable)
+	// @deprecated This field is abandoned and kept only for database compatibility.
+	// Use actToolInfoList instead, which contains ActToolInfo objects with name and
+	// parameters.
 	private String toolName;
 
 	// Tool parameters used for action (serialized, if applicable)
+	// @deprecated This field is abandoned and kept only for database compatibility.
+	// Use actToolInfoList instead, which contains ActToolInfo objects with name and
+	// parameters.
 	private String toolParameters;
 
 	// Action tool information(When disabling parallel tool calls, there is always only
@@ -300,18 +308,38 @@ public class ThinkActRecord {
 		this.outputCharCount = outputCharCount;
 	}
 
+	/**
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
+	 */
 	public String getToolName() {
 		return toolName;
 	}
 
+	/**
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
+	 */
 	public void setToolName(String toolName) {
 		this.toolName = toolName;
 	}
 
+	/**
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
+	 */
 	public String getToolParameters() {
 		return toolParameters;
 	}
 
+	/**
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
+	 */
 	public void setToolParameters(String toolParameters) {
 		this.toolParameters = toolParameters;
 	}

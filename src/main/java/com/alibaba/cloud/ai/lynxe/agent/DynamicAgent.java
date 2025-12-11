@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -57,7 +58,6 @@ import com.alibaba.cloud.ai.lynxe.recorder.service.PlanExecutionRecorder.ThinkAc
 import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.ExecutionStep;
 import com.alibaba.cloud.ai.lynxe.runtime.executor.AbstractPlanExecutor;
 import com.alibaba.cloud.ai.lynxe.runtime.service.AgentInterruptionHelper;
-import com.alibaba.cloud.ai.lynxe.runtime.service.ParallelToolExecutionService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.PlanIdDispatcher;
 import com.alibaba.cloud.ai.lynxe.runtime.service.ServiceGroupIndexService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.TaskInterruptionCheckerService;
@@ -69,6 +69,7 @@ import com.alibaba.cloud.ai.lynxe.tool.TerminableTool;
 import com.alibaba.cloud.ai.lynxe.tool.TerminateTool;
 import com.alibaba.cloud.ai.lynxe.tool.ToolCallBiFunctionDef;
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
+import com.alibaba.cloud.ai.lynxe.tool.mapreduce.ParallelExecutionService;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -114,7 +115,7 @@ public class DynamicAgent extends ReActAgent {
 
 	private AgentInterruptionHelper agentInterruptionHelper;
 
-	private ParallelToolExecutionService parallelToolExecutionService;
+	private ParallelExecutionService parallelExecutionService;
 
 	private MemoryService memoryService;
 
@@ -170,8 +171,8 @@ public class DynamicAgent extends ReActAgent {
 			Map<String, Object> initialAgentSetting, UserInputService userInputService, String modelName,
 			StreamingResponseHandler streamingResponseHandler, ExecutionStep step, PlanIdDispatcher planIdDispatcher,
 			LynxeEventPublisher lynxeEventPublisher, AgentInterruptionHelper agentInterruptionHelper,
-			ObjectMapper objectMapper, ParallelToolExecutionService parallelToolExecutionService,
-			MemoryService memoryService, ConversationMemoryLimitService conversationMemoryLimitService,
+			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService, MemoryService memoryService,
+			ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		super(llmService, planExecutionRecorder, lynxeProperties, initialAgentSetting, step, planIdDispatcher);
 		this.objectMapper = objectMapper;
@@ -191,7 +192,7 @@ public class DynamicAgent extends ReActAgent {
 		this.streamingResponseHandler = streamingResponseHandler;
 		this.lynxeEventPublisher = lynxeEventPublisher;
 		this.agentInterruptionHelper = agentInterruptionHelper;
-		this.parallelToolExecutionService = parallelToolExecutionService;
+		this.parallelExecutionService = parallelExecutionService;
 		this.memoryService = memoryService;
 		this.conversationMemoryLimitService = conversationMemoryLimitService;
 		this.serviceGroupIndexService = serviceGroupIndexService;
@@ -411,8 +412,15 @@ public class DynamicAgent extends ReActAgent {
 					String thinkActId = planIdDispatcher.generateThinkActId();
 
 					actToolInfoList = new ArrayList<>();
+					// Generate unique toolCallId for each tool when multiple tools are
+					// present
+					// This ensures each tool has its own toolCallId for proper sub-plan
+					// linkage
 					for (ToolCall toolCall : toolCalls) {
-						ActToolParam actToolInfo = new ActToolParam(toolCall.name(), toolCall.arguments(), toolcallId);
+						String toolCallIdForTool = (toolCalls.size() > 1) ? planIdDispatcher.generateToolCallId()
+								: toolcallId;
+						ActToolParam actToolInfo = new ActToolParam(toolCall.name(), toolCall.arguments(),
+								toolCallIdForTool);
 						actToolInfoList.add(actToolInfo);
 					}
 
@@ -806,46 +814,55 @@ public class DynamicAgent extends ReActAgent {
 				return new AgentExecResult(errorMessage, AgentState.IN_PROGRESS);
 			}
 
-			// Execute all tools in parallel
-			if (parallelToolExecutionService == null) {
-				log.error("ParallelToolExecutionService is not available");
+			// Execute all tools in parallel using ParallelExecutionService
+			if (parallelExecutionService == null) {
+				log.error("ParallelExecutionService is not available");
 				return new AgentExecResult("Parallel execution service is not available", AgentState.COMPLETED);
 			}
 
 			Map<String, ToolCallBackContext> toolCallbackMap = toolCallbackProvider.getToolCallBackContext();
 			Map<String, Object> toolContextMap = new HashMap<>();
-			toolContextMap.put("toolcallId", planIdDispatcher.generateToolCallId());
 			toolContextMap.put("planDepth", getPlanDepth());
 			ToolContext parentToolContext = new ToolContext(toolContextMap);
 
-			List<ParallelToolExecutionService.ToolExecutionResult> parallelResults = parallelToolExecutionService
-				.executeToolsInParallel(toolCalls, toolCallbackMap, planIdDispatcher, parentToolContext);
+			// Create execution requests for each tool with their corresponding toolCallId
+			// This ensures the toolCallId used during execution matches the one in
+			// ActToolParam
+			List<ParallelExecutionService.ParallelExecutionRequest> executions = new ArrayList<>();
+			for (int i = 0; i < toolCalls.size() && i < actToolInfoList.size(); i++) {
+				ToolCall toolCall = toolCalls.get(i);
+				ActToolParam param = actToolInfoList.get(i);
+				Map<String, Object> params = parseToolArguments(toolCall.arguments());
+				// Pass the toolCallId from ActToolParam to ensure consistency
+				executions.add(new ParallelExecutionService.ParallelExecutionRequest(toolCall.name(), params,
+						param.getToolCallId()));
+			}
+
+			// Execute tools in parallel
+			CompletableFuture<List<Map<String, Object>>> executionFuture = parallelExecutionService
+				.executeToolsInParallel(executions, toolCallbackMap, parentToolContext);
+			List<Map<String, Object>> parallelResults = executionFuture.join();
 			log.info("Executed {} tools in parallel", parallelResults.size());
 
 			// Process results and update actToolInfoList
+			// Results are sorted by index, so they match the order of toolCalls
 			List<String> resultList = new ArrayList<>();
-			for (int i = 0; i < toolCalls.size() && i < actToolInfoList.size(); i++) {
+			for (int i = 0; i < toolCalls.size() && i < actToolInfoList.size() && i < parallelResults.size(); i++) {
 				ToolCall toolCall = toolCalls.get(i);
 				String toolName = toolCall.name();
 				ActToolParam param = actToolInfoList.get(i);
+				Map<String, Object> result = parallelResults.get(i);
 
-				// Find corresponding result
-				String processedResult = null;
-				for (ParallelToolExecutionService.ToolExecutionResult result : parallelResults) {
-					if (result.getToolName().equals(toolName)) {
-						if (result.isSuccess()) {
-							processedResult = processToolResult(result.getResult().getOutput());
-						}
-						else {
-							processedResult = "Error: " + result.getResult().getOutput();
-						}
-						break;
-					}
+				// Extract result from ParallelExecutionService format
+				String status = (String) result.get("status");
+				String processedResult;
+				if ("SUCCESS".equals(status)) {
+					Object outputObj = result.get("output");
+					processedResult = (outputObj != null) ? processToolResult(outputObj.toString()) : "No output";
 				}
-
-				if (processedResult == null) {
-					processedResult = "Tool execution result not found";
-					log.warn("Result not found for tool: {}", toolName);
+				else {
+					Object errorObj = result.get("error");
+					processedResult = "Error: " + (errorObj != null ? errorObj.toString() : "Unknown error");
 				}
 
 				param.setResult(processedResult);
@@ -871,6 +888,34 @@ public class DynamicAgent extends ReActAgent {
 		catch (Exception e) {
 			log.error("Error executing multiple tools: {}", e.getMessage(), e);
 			return new AgentExecResult("Error executing tools: " + e.getMessage(), AgentState.IN_PROGRESS);
+		}
+	}
+
+	/**
+	 * Parse tool arguments from JSON string to Map
+	 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> parseToolArguments(String arguments) {
+		if (arguments == null || arguments.trim().isEmpty()) {
+			return new HashMap<>();
+		}
+
+		try {
+			// Try to parse as JSON
+			Object parsed = objectMapper.readValue(arguments, Object.class);
+			if (parsed instanceof Map) {
+				return (Map<String, Object>) parsed;
+			}
+			else {
+				// If it's not a Map, wrap it
+				Map<String, Object> result = new HashMap<>();
+				result.put("value", parsed);
+				return result;
+			}
+		}
+		catch (Exception e) {
+			log.warn("Failed to parse tool arguments as JSON: {}. Using empty map.", arguments);
+			return new HashMap<>();
 		}
 	}
 

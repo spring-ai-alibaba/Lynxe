@@ -9,13 +9,15 @@ description: |
   - 使用带参数化查询的预编译语句以防止 SQL 注入
   - 在查询中使用 ? 占位符，并为安全参数绑定提供参数数组
   - 支持所有数据类型，包括字符串、数字、布尔值和 null 值
+  - 支持批量插入：提供数组的数组（每个内部数组是一行）以实现高效的多行插入
 
   示例：
-  - INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=["John", "john@example.com"]
+  - 单行 INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=["John", "john@example.com"]
+  - 批量 INSERT: query="INSERT INTO users (name, email) VALUES (?, ?)", parameters=[["John", "john@example.com"], ["Jane", "jane@example.com"], ["Bob", "bob@example.com"]]
   - UPDATE: query="UPDATE users SET email = ? WHERE id = ?", parameters=["newemail@example.com", 123]
   - DELETE: query="DELETE FROM users WHERE id = ?", parameters=[456]
 
-  重要提示：始终使用 ? 占位符并为数据值提供相应的参数数组。
+  重要提示：始终使用 ? 占位符并为数据值提供相应的参数数组。对于批量插入，提供一个数组的数组，其中每个内部数组代表一行。
 
 parameters: |
   {
@@ -25,8 +27,8 @@ parameters: |
           "query": { "type": "string", "description": "用于写入操作的 SQL 语句（INSERT、UPDATE、DELETE、ALTER 等）。使用 ? 占位符进行参数化查询。" },
           "parameters": {
               "type": "array",
-              "description": "预编译语句的可选参数值数组。值将绑定到查询中的 ? 占位符。",
-              "items": { "type": ["string", "number", "boolean", "null"] }
+              "description": "预编译语句的可选参数值数组。对于单行操作，提供扁平数组：[val1, val2, ...]。对于批量插入，提供数组的数组，其中每个内部数组是一行：[[val1, val2], [val3, val4], ...]。值将绑定到查询中的 ? 占位符。",
+              "items": { "type": ["string", "number", "boolean", "null", "array"] }
           },
           "datasourceName": { "type": "string", "description": "数据源名称，可选" }
       },

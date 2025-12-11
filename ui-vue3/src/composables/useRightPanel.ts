@@ -66,23 +66,29 @@ export function useRightPanel() {
   const findRootPlanIdForStep = (stepId: string): string | null => {
     if (!stepId) return null
 
+    const availablePlans = Object.keys(planExecution.planExecutionRecords.value)
+    console.log(
+      '[useRightPanel] Searching for rootPlanId, stepId:',
+      stepId,
+      'Available plans:',
+      availablePlans.length
+    )
+
     // Search through all plan execution records
-    for (const [planId, record] of Object.entries(planExecution.planExecutionRecords.value)) {
+    for (const [_planId, record] of Object.entries(planExecution.planExecutionRecords.value)) {
       // Check if this record's rootPlanId or currentPlanId matches
       const recordKey = record.rootPlanId || record.currentPlanId
-      if (!recordKey) continue
+      if (!recordKey) {
+        continue
+      }
 
       // Search in agentExecutionSequence
       if (record.agentExecutionSequence) {
         for (const agentExecution of record.agentExecutionSequence) {
           if (agentExecution.stepId === stepId) {
-            // Found the step, return the rootPlanId (or currentPlanId if rootPlanId is not available)
+            // Found the step in main plan, return the rootPlanId (or currentPlanId if rootPlanId is not available)
             const rootPlanId = record.rootPlanId || record.currentPlanId
-            console.log('[useRightPanel] Found rootPlanId for stepId:', {
-              stepId,
-              rootPlanId,
-              planId,
-            })
+            console.log('[useRightPanel] Found stepId in main plan, rootPlanId:', rootPlanId)
             return rootPlanId || null
           }
 
@@ -95,6 +101,7 @@ export function useRightPanel() {
                 stepId
               )
               if (subRootPlanId) {
+                console.log('[useRightPanel] Found stepId in sub-plan, rootPlanId:', subRootPlanId)
                 return subRootPlanId
               }
             }
@@ -103,7 +110,20 @@ export function useRightPanel() {
       }
     }
 
-    console.warn('[useRightPanel] Could not find rootPlanId for stepId:', stepId)
+    // If planExecutionRecords is empty, this is expected - data might not be loaded yet
+    if (availablePlans.length === 0) {
+      console.log(
+        '[useRightPanel] planExecutionRecords is empty, will use currentRootPlanId as fallback'
+      )
+    } else {
+      console.warn(
+        '[useRightPanel] Could not find rootPlanId for stepId:',
+        stepId,
+        'in',
+        availablePlans.length,
+        'plans'
+      )
+    }
     return null
   }
 
@@ -114,17 +134,23 @@ export function useRightPanel() {
    * @returns The rootPlanId if found, null otherwise
    */
   const findRootPlanIdInSubPlan = (subPlan: PlanExecutionRecord, stepId: string): string | null => {
-    if (!subPlan || !subPlan.agentExecutionSequence) return null
+    if (!subPlan || !subPlan.agentExecutionSequence) {
+      return null
+    }
 
     for (const agentExecution of subPlan.agentExecutionSequence) {
       if (agentExecution.stepId === stepId) {
-        return subPlan.rootPlanId || subPlan.currentPlanId || null
+        const foundRootPlanId = subPlan.rootPlanId || subPlan.currentPlanId || null
+        console.log('[useRightPanel] Found stepId in sub-plan, rootPlanId:', foundRootPlanId)
+        return foundRootPlanId
       }
 
       if (agentExecution.subPlanExecutionRecords) {
         for (const nestedSubPlan of agentExecution.subPlanExecutionRecords) {
           const result = findRootPlanIdInSubPlan(nestedSubPlan, stepId)
-          if (result) return result
+          if (result) {
+            return result
+          }
         }
       }
     }
@@ -174,8 +200,9 @@ export function useRightPanel() {
       } else {
         // If not found, clear it (will fall back to currentRootPlanId)
         selectedRootPlanId.value = null
-        console.warn(
-          '[useRightPanel] Could not find rootPlanId for step, will use currentRootPlanId'
+        // Only log as info, not warning, since fallback to currentRootPlanId is expected behavior
+        console.log(
+          '[useRightPanel] Could not find rootPlanId for step, will use currentRootPlanId as fallback'
         )
       }
 
@@ -254,8 +281,8 @@ export function useRightPanel() {
    * since currentRootPlanId is now reactively derived from useMessageDialog
    * @param rootPlanId - The root plan ID to update (deprecated, kept for compatibility)
    */
-  const updateDisplayedPlanProgress = (rootPlanId: string): void => {
-    console.log('[useRightPanel] updateDisplayedPlanProgress called with rootPlanId:', rootPlanId)
+  const updateDisplayedPlanProgress = (_rootPlanId: string): void => {
+    // console.log('[useRightPanel] updateDisplayedPlanProgress called with rootPlanId:', rootPlanId)
     // No-op: currentRootPlanId is now reactively derived from useMessageDialog
   }
 

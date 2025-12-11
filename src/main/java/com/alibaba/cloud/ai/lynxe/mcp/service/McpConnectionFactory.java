@@ -16,6 +16,8 @@
 package com.alibaba.cloud.ai.lynxe.mcp.service;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
@@ -34,6 +36,7 @@ import io.modelcontextprotocol.client.McpAsyncClient;
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.spec.McpClientTransport;
 import io.modelcontextprotocol.spec.McpSchema;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * MCP connection factory
@@ -50,6 +53,15 @@ public class McpConnectionFactory {
 	private final McpProperties mcpProperties;
 
 	private final ObjectMapper objectMapper;
+
+	/**
+	 * Thread pool for blocking operations to avoid blocking Netty EventLoop threads
+	 */
+	private final ExecutorService blockingExecutor = Executors.newCachedThreadPool(r -> {
+		Thread t = new Thread(r, "MCP-Blocking");
+		t.setDaemon(true);
+		return t;
+	});
 
 	public McpConnectionFactory(McpTransportBuilder transportBuilder, McpConfigValidator configValidator,
 			McpProperties mcpProperties, ObjectMapper objectMapper) {
@@ -140,14 +152,21 @@ public class McpConnectionFactory {
 						mcpServerName, attempt, maxRetries, mcpProperties.getInitializationTimeout().getSeconds());
 
 				long initStartTime = System.currentTimeMillis();
-				mcpAsyncClient.initialize().timeout(mcpProperties.getInitializationTimeout()).doOnSuccess(result -> {
-					long initDuration = System.currentTimeMillis() - initStartTime;
-					logger.info("MCP client initialized successfully for {} in {}ms", mcpServerName, initDuration);
-				}).doOnError(error -> {
-					long initDuration = System.currentTimeMillis() - initStartTime;
-					logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName, initDuration,
-							error.getMessage(), error);
-				}).block();
+				// Use subscribeOn to ensure block() executes on a blocking thread, not
+				// Netty EventLoop
+				mcpAsyncClient.initialize()
+					.timeout(mcpProperties.getInitializationTimeout())
+					.subscribeOn(Schedulers.fromExecutor(blockingExecutor))
+					.doOnSuccess(result -> {
+						long initDuration = System.currentTimeMillis() - initStartTime;
+						logger.info("MCP client initialized successfully for {} in {}ms", mcpServerName, initDuration);
+					})
+					.doOnError(error -> {
+						long initDuration = System.currentTimeMillis() - initStartTime;
+						logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName,
+								initDuration, error.getMessage(), error);
+					})
+					.block();
 
 				logger.info("MCP transport configured successfully for: {} (attempt {})", mcpServerName, attempt);
 
@@ -263,6 +282,13 @@ public class McpConnectionFactory {
 			return String.format("JSON parsing error: %s. Server response may be malformed.", rootCauseMessage);
 		}
 
+		// Check for transport enqueue errors (indicates process died or streams closed)
+		if (rootCauseMessage != null && rootCauseMessage.contains("Failed to enqueue message")) {
+			return String.format(
+					"Transport enqueue failed: %s. The MCP server process may have died or stdin/stdout streams are closed. This typically indicates: 1) Process crashed or exited unexpectedly, 2) Transport was closed but still being used, 3) Streams were closed. Check server stderr logs and process status.",
+					rootCauseMessage);
+		}
+
 		return String.format("Error type: %s, Message: %s. Check full stack trace for details.", rootCauseType,
 				rootCauseMessage);
 	}
@@ -346,6 +372,12 @@ public class McpConnectionFactory {
 						|| lowerMessage.contains("command") || lowerMessage.contains("exec")
 						|| lowerMessage.contains("spawn");
 			}
+		}
+
+		// Check for transport enqueue errors (indicates process died or streams closed)
+		String message = e.getMessage();
+		if (message != null && message.contains("Failed to enqueue message")) {
+			return true;
 		}
 
 		// Check exception class name

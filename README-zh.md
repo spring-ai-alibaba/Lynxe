@@ -9,15 +9,18 @@
 
 [English](./README.md) | 🌍 **中文**
 
-📚 开发者文档: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
-
 [关于](#-关于) • [快速开始](#-快速开始) • [如何贡献](#-如何贡献)
+
+[使用案例](https://github.com/Lynxe-public/Lynxe-public-prompts)
 
 </div>
 
 ## ✨ Lynxe 简介（原名：JManus）
 
 Lynxe 是 Manus 的一个 Java 实现，目前已经在阿里巴巴集团内的很多应用都有使用，主要用于处理需要有一定确定性要求的探索性任务，比如，快速从海量数据中找到数据并转换成数据库内的一行数据，或者分析日志并给出告警等。
+
+
+你可以从这里看到我们推荐的一些已经实现好的 Func-Agent 的[使用案例](https://github.com/Lynxe-public/Lynxe-public-prompts)。
 
 Lynxe 也提供了 http 的服务调用能力，适合被集成到既有的项目中。具体可以见[开发者快速入门 (中文)](./README-dev.md)
 
@@ -26,7 +29,6 @@ Lynxe 也提供了 http 的服务调用能力，适合被集成到既有的项�
 ### 🤖 **纯 Java 的 Manus 实现**：
 
 纯粹的 Java 多智能体协作实现，提供了完整的 http 调用接口，适合 Java 开发者做二次集成。
-![Image](https://github.com/user-attachments/assets/a5695e71-3190-4c89-8f5d-094f59da6e77)
 
 ### 🛠️ **Func-Agent 模式**：
 
@@ -206,7 +208,7 @@ Lynxe 支持 H2（默认）、MySQL 以及 PostgreSQL 数据库。
 
 在您的浏览器中访问 `http://localhost:18080`。
 
-🎉 **恭喜!** 您的多 Agent 系统现已上线并准备就绪。 你可以访问https://github.com/talk-flow/public-usecase 去做一些我们认为比较有效的实践。
+🎉 **恭喜!** 您的多 Agent 系统现已上线并准备就绪。 你可以访问https://github.com/Lynxe-public/Lynxe-public-prompts 去做一些我们认为比较有效的实践。
 
 ## 稳定版本的 Release
 
@@ -261,5 +263,7 @@ mvn spring-boot:run
 ## 交流讨论
 
 点击这个链接加入钉钉群讨论：[钉群链接](https://qr.dingtalk.com/action/joingroup?code=v1,k1,PBuFX00snERuKcnnG4YAPK52FOXwAkLYlulUUD9KiRo=&_dt_no_comment=1&origin=11)
+
+📚 开发者文档: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
 
 </div>

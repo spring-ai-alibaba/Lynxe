@@ -62,7 +62,7 @@
                 v-for="group in filteredServiceGroups"
                 :key="group"
                 class="service-group-option"
-                @mousedown="selectServiceGroup(group)"
+                @click="selectServiceGroup(group)"
               >
                 {{ group }}
               </div>
@@ -335,8 +335,8 @@
     />
 
     <!-- Copy Plan Modal -->
-    <div v-if="showCopyPlanModal" class="modal-overlay" @mousedown="handleModalOverlayClick">
-      <div class="modal-content" @mousedown.stop>
+    <div v-if="showCopyPlanModal" class="modal-overlay" @click="handleModalOverlayClick">
+      <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>{{ $t('sidebar.copyPlan') }}</h3>
           <button class="close-btn" @click="closeCopyPlanModal">
@@ -936,7 +936,7 @@ const closeCopyPlanModal = () => {
 }
 
 // Handle modal overlay click - only close if clicking directly on overlay
-const handleModalOverlayClick = (event: MouseEvent) => {
+const handleModalOverlayClick = (event: Event) => {
   // Only close if the click target is the overlay itself, not its children
   if (event.target === event.currentTarget) {
     closeCopyPlanModal()

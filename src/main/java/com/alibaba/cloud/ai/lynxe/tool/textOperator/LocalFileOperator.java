@@ -99,6 +99,9 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 		@com.fasterxml.jackson.annotation.JsonProperty("whole_word")
 		private Boolean wholeWord;
 
+		@com.fasterxml.jackson.annotation.JsonProperty("context_lines")
+		private Integer contextLines;
+
 		// Getters and setters
 		public String getAction() {
 			return action;
@@ -178,6 +181,14 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 
 		public void setWholeWord(Boolean wholeWord) {
 			this.wholeWord = wholeWord;
+		}
+
+		public Integer getContextLines() {
+			return contextLines;
+		}
+
+		public void setContextLines(Integer contextLines) {
+			this.contextLines = contextLines;
 		}
 
 	}
@@ -267,6 +278,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 					String pattern = (String) toolInputMap.get("pattern");
 					Boolean caseSensitive = (Boolean) toolInputMap.get("case_sensitive");
 					Boolean wholeWord = (Boolean) toolInputMap.get("whole_word");
+					Integer contextLines = (Integer) toolInputMap.get("context_lines");
 
 					if (pattern == null) {
 						yield new ToolExecuteResult("Error: grep operation requires pattern parameter");
@@ -276,7 +288,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 					pattern = replaceShortUrls(pattern);
 
 					yield grepText(filePath, pattern, caseSensitive != null ? caseSensitive : false,
-							wholeWord != null ? wholeWord : false);
+							wholeWord != null ? wholeWord : false, contextLines != null ? contextLines : 0);
 				}
 				default -> new ToolExecuteResult("Unknown operation: " + action
 						+ ". Supported operations: replace, get_text, get_all_text, append, delete, count_words, list_files, grep");
@@ -351,6 +363,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 					String pattern = input.getPattern();
 					Boolean caseSensitive = input.getCaseSensitive();
 					Boolean wholeWord = input.getWholeWord();
+					Integer contextLines = input.getContextLines();
 
 					if (pattern == null) {
 						yield new ToolExecuteResult("Error: grep operation requires pattern parameter");
@@ -360,7 +373,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 					pattern = replaceShortUrls(pattern);
 
 					yield grepText(filePath, pattern, caseSensitive != null ? caseSensitive : false,
-							wholeWord != null ? wholeWord : false);
+							wholeWord != null ? wholeWord : false, contextLines != null ? contextLines : 0);
 				}
 				default -> new ToolExecuteResult("Unknown operation: " + action
 						+ ". Supported operations: replace, get_text, get_all_text, append, delete, count_words, list_files, grep");
@@ -657,7 +670,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 	}
 
 	/**
-	 * Count words in file
+	 * Count characters in file
 	 */
 	private ToolExecuteResult countWords(String filePath) {
 		try {
@@ -671,20 +684,23 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 			}
 
 			String content = Files.readString(absolutePath);
-			int wordCount = content.isEmpty() ? 0 : content.split("\\s+").length;
+			int characterCount = content.length();
 
-			return new ToolExecuteResult(String.format("Total word count: %d", wordCount));
+			return new ToolExecuteResult(String.format("Total character count: %d", characterCount));
 		}
 		catch (IOException e) {
-			log.error("Error counting words in file: {}", filePath, e);
-			return new ToolExecuteResult("Error counting words: " + e.getMessage());
+			log.error("Error counting characters in file: {}", filePath, e);
+			return new ToolExecuteResult("Error counting characters: " + e.getMessage());
 		}
 	}
 
 	/**
 	 * Search for text patterns in file (grep functionality)
+	 * @param contextLines Number of context lines to show above and below each match (0 =
+	 * no context)
 	 */
-	private ToolExecuteResult grepText(String filePath, String pattern, boolean caseSensitive, boolean wholeWord) {
+	private ToolExecuteResult grepText(String filePath, String pattern, boolean caseSensitive, boolean wholeWord,
+			int contextLines) {
 		try {
 			Path absolutePath = validateLocalPath(filePath);
 
@@ -724,23 +740,59 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 
 			StringBuilder result = new StringBuilder();
 			result.append(String.format("Grep results for pattern '%s' in file: %s\n", pattern, filePath));
+			if (contextLines > 0) {
+				result.append(String.format("Showing %d line(s) of context around each match\n", contextLines));
+			}
 			result.append("=".repeat(60)).append("\n");
 
+			// Track which lines have been printed to avoid duplicates when showing
+			// context
+			java.util.Set<Integer> printedLines = new java.util.HashSet<>();
 			int matchCount = 0;
+
 			for (int i = 0; i < lines.size(); i++) {
 				String line = lines.get(i);
 				String searchLine = caseSensitive ? line : line.toLowerCase();
+				boolean isMatch = false;
 
 				if (wholeWord) {
-					if (regexPattern.matcher(line).find()) {
-						result.append(String.format("%4d: %s\n", i + 1, line));
-						matchCount++;
-					}
+					isMatch = regexPattern.matcher(line).find();
 				}
 				else {
-					if (searchLine.contains(searchPattern)) {
+					isMatch = searchLine.contains(searchPattern);
+				}
+
+				if (isMatch) {
+					matchCount++;
+
+					// Show context lines before the match
+					if (contextLines > 0) {
+						for (int j = Math.max(0, i - contextLines); j < i; j++) {
+							if (!printedLines.contains(j)) {
+								result.append(String.format("%4d- %s\n", j + 1, lines.get(j)));
+								printedLines.add(j);
+							}
+						}
+					}
+
+					// Show the matching line
+					if (!printedLines.contains(i)) {
 						result.append(String.format("%4d: %s\n", i + 1, line));
-						matchCount++;
+						printedLines.add(i);
+					}
+
+					// Show context lines after the match
+					if (contextLines > 0) {
+						for (int j = i + 1; j <= Math.min(lines.size() - 1, i + contextLines); j++) {
+							if (!printedLines.contains(j)) {
+								result.append(String.format("%4d+ %s\n", j + 1, lines.get(j)));
+								printedLines.add(j);
+							}
+						}
+						// Add separator between matches if context is shown
+						if (i < lines.size() - 1) {
+							result.append("--\n");
+						}
 					}
 				}
 			}
@@ -889,10 +941,10 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 				- get_all_text: Get all content from file
 				  Note: If file content is too long, it will be automatically stored in temporary file and return file path
 				- append: Append content to file, requires content parameter
-				- count_words: Count words in current file
+				- count_words: Count characters in current file
 				- list_files: List files and directories in the current plan directory, optional file_path parameter (defaults to current plan root)
 				- grep: Search for text patterns in file, similar to Linux grep command
-				  Parameters: pattern (required), case_sensitive (optional, default false), whole_word (optional, default false)
+				  Parameters: pattern (required), case_sensitive (optional, default false), whole_word (optional, default false), context_lines (optional, default 0, number of lines to show above and below each match)
 
 				Security Features:
 				- All operations are restricted to the current plan directory
@@ -1019,7 +1071,7 @@ public class LocalFileOperator extends AbstractBaseTool<LocalFileOperator.LocalF
 				                },
 				                "file_path": {
 				                    "type": "string",
-				                    "description": "File path to count words in"
+				                    "description": "File path to count characters in"
 				                }
 				            },
 				            "required": ["action", "file_path"],

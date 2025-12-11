@@ -85,19 +85,39 @@ public class PlanFinalizer {
 
 		// Check if resultStr already contains a message that can be used directly
 		String resultStr = context.getPlan().getResult();
-		String extractedMessage = extractMessageFromJsonIfApplicable(resultStr);
+		MessageExtractionResult extractionResult = extractMessageFromJsonIfApplicable(resultStr);
 
-		// If we successfully extracted a message from resultStr, use it directly without
+		// If we successfully extracted a simple text message, use it directly without
 		// calling LLM
-		// extractedMessage will be non-null and different from resultStr if extraction
-		// succeeded
-		if (extractedMessage != null) {
+		if (extractionResult != null && extractionResult.isSimpleText()) {
 			log.debug("Using message from resultStr directly, skipping LLM call");
-			processAndRecordResult(context, result, extractedMessage, "Generated summary: {}");
+			processAndRecordResult(context, result, extractionResult.getMessage(), "Generated summary: {}");
 			return;
 		}
 
-		// Otherwise, generate summary using LLM
+		// If we have structured data (array of objects), generate summary with that data
+		if (extractionResult != null && extractionResult.isStructuredData()) {
+			log.debug("Found structured data in message, generating summary with LLM");
+			Map<String, Object> promptVariables = Map.of("executionDetail",
+					context.getPlan().getPlanExecutionStateStringFormat(false), "title", context.getTitle(),
+					"structuredData", extractionResult.getStructuredData());
+
+			String summaryPrompt = """
+					You are lynxe, an AI assistant capable of responding to user requests. You need to respond to the user's request based on the execution results of this step-by-step execution plan.
+
+					Step-by-step plan execution details:
+					{executionDetail}
+
+					The execution has completed and returned the following structured data:
+					{structuredData}
+
+					Please generate a comprehensive summary message based on the structured data above. The summary should be clear, informative, and directly answer the user's request.
+					""";
+			generateWithLlm(context, result, summaryPrompt, promptVariables, "summary", "Generated summary: {}");
+			return;
+		}
+
+		// Otherwise, generate summary using LLM with standard execution details
 		Map<String, Object> promptVariables = Map.of("executionDetail",
 				context.getPlan().getPlanExecutionStateStringFormat(false), "title", context.getTitle());
 
@@ -234,7 +254,16 @@ public class PlanFinalizer {
 					Character.toUpperCase(operationType.charAt(0)) + operationType.substring(1) + " generation");
 
 			// Try to parse JSON and extract message if output only has message key
-			String processedResult = extractMessageFromJsonIfApplicable(llmResult);
+			MessageExtractionResult extractionResult = extractMessageFromJsonIfApplicable(llmResult);
+			String processedResult;
+			if (extractionResult != null && extractionResult.isSimpleText()) {
+				processedResult = extractionResult.getMessage();
+			}
+			else {
+				// Use original LLM result if extraction failed or returned structured
+				// data
+				processedResult = llmResult;
+			}
 			processAndRecordResult(context, result, processedResult, successLogTemplate);
 		}
 		catch (Exception e) {
@@ -243,12 +272,53 @@ public class PlanFinalizer {
 	}
 
 	/**
+	 * Result of message extraction from JSON
+	 */
+	private static class MessageExtractionResult {
+
+		private final String message;
+
+		private final String structuredData;
+
+		private final boolean isSimpleText;
+
+		public MessageExtractionResult(String message, boolean isSimpleText) {
+			this.message = message;
+			this.structuredData = null;
+			this.isSimpleText = isSimpleText;
+		}
+
+		public MessageExtractionResult(String structuredData) {
+			this.message = null;
+			this.structuredData = structuredData;
+			this.isSimpleText = false;
+		}
+
+		public String getMessage() {
+			return message;
+		}
+
+		public String getStructuredData() {
+			return structuredData;
+		}
+
+		public boolean isSimpleText() {
+			return isSimpleText;
+		}
+
+		public boolean isStructuredData() {
+			return structuredData != null;
+		}
+
+	}
+
+	/**
 	 * Extract message from JSON response if output only contains message key
 	 * @param jsonString The JSON string to parse (may be JSON or plain text)
-	 * @return Extracted message if applicable, null if extraction failed or doesn't match
-	 * expected structure
+	 * @return Extracted message result if applicable, null if extraction failed or
+	 * doesn't match expected structure
 	 */
-	private String extractMessageFromJsonIfApplicable(String jsonString) {
+	private MessageExtractionResult extractMessageFromJsonIfApplicable(String jsonString) {
 		if (jsonString == null || jsonString.trim().isEmpty()) {
 			return null;
 		}
@@ -257,7 +327,9 @@ public class PlanFinalizer {
 			// Try to parse as JSON
 			JsonNode rootNode = objectMapper.readTree(jsonString);
 
-			// Check if it has "output" key
+			JsonNode messageNode = null;
+
+			// First, check if it has "output" key
 			if (rootNode.has("output") && rootNode.get("output").isObject()) {
 				JsonNode outputNode = rootNode.get("output");
 
@@ -268,12 +340,36 @@ public class PlanFinalizer {
 
 				// If output only has one key named "message", extract it
 				if (keys.size() == 1 && keys.contains("message")) {
-					JsonNode messageNode = outputNode.get("message");
-					if (messageNode != null && messageNode.isTextual()) {
-						String message = messageNode.asText();
-						log.debug("Extracted message from JSON output: {}", message);
-						return message;
-					}
+					messageNode = outputNode.get("message");
+				}
+			}
+			// Check if root has direct "message" key (not wrapped in "output")
+			else if (rootNode.has("message")) {
+				messageNode = rootNode.get("message");
+			}
+
+			if (messageNode != null) {
+				// If message is a simple text string, return it directly
+				if (messageNode.isTextual()) {
+					String message = messageNode.asText();
+					log.debug("Extracted text message from JSON: {}", message);
+					return new MessageExtractionResult(message, true);
+				}
+				// If message is an array of objects, return structured data for LLM
+				// summary generation
+				else if (messageNode.isArray()) {
+					String structuredDataJson = objectMapper.writeValueAsString(messageNode);
+					log.debug("Found structured data (array) in message, will generate summary: {}",
+							structuredDataJson);
+					return new MessageExtractionResult(structuredDataJson);
+				}
+				// If message is an object, return structured data for LLM summary
+				// generation
+				else if (messageNode.isObject()) {
+					String structuredDataJson = objectMapper.writeValueAsString(messageNode);
+					log.debug("Found structured data (object) in message, will generate summary: {}",
+							structuredDataJson);
+					return new MessageExtractionResult(structuredDataJson);
 				}
 			}
 		}

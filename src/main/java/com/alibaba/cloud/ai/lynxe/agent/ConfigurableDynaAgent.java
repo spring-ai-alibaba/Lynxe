@@ -33,12 +33,12 @@ import com.alibaba.cloud.ai.lynxe.planning.PlanningFactory.ToolCallBackContext;
 import com.alibaba.cloud.ai.lynxe.recorder.service.PlanExecutionRecorder;
 import com.alibaba.cloud.ai.lynxe.runtime.entity.vo.ExecutionStep;
 import com.alibaba.cloud.ai.lynxe.runtime.service.AgentInterruptionHelper;
-import com.alibaba.cloud.ai.lynxe.runtime.service.ParallelToolExecutionService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.PlanIdDispatcher;
 import com.alibaba.cloud.ai.lynxe.runtime.service.ServiceGroupIndexService;
 import com.alibaba.cloud.ai.lynxe.runtime.service.UserInputService;
 import com.alibaba.cloud.ai.lynxe.tool.TerminableTool;
 import com.alibaba.cloud.ai.lynxe.tool.TerminateTool;
+import com.alibaba.cloud.ai.lynxe.tool.mapreduce.ParallelExecutionService;
 import com.alibaba.cloud.ai.lynxe.workspace.conversation.service.MemoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -78,13 +78,13 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 			Map<String, Object> initialAgentSetting, UserInputService userInputService, String modelName,
 			StreamingResponseHandler streamingResponseHandler, ExecutionStep step, PlanIdDispatcher planIdDispatcher,
 			LynxeEventPublisher lynxeEventPublisher, AgentInterruptionHelper agentInterruptionHelper,
-			ObjectMapper objectMapper, ParallelToolExecutionService parallelToolExecutionService,
-			MemoryService memoryService, ConversationMemoryLimitService conversationMemoryLimitService,
+			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService, MemoryService memoryService,
+			ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		super(llmService, planExecutionRecorder, lynxeProperties, name, description, nextStepPrompt, availableToolKeys,
 				toolCallingManager, initialAgentSetting, userInputService, modelName, streamingResponseHandler, step,
-				planIdDispatcher, lynxeEventPublisher, agentInterruptionHelper, objectMapper,
-				parallelToolExecutionService, memoryService, conversationMemoryLimitService, serviceGroupIndexService);
+				planIdDispatcher, lynxeEventPublisher, agentInterruptionHelper, objectMapper, parallelExecutionService,
+				memoryService, conversationMemoryLimitService, serviceGroupIndexService);
 		this.serviceGroupIndexService = serviceGroupIndexService;
 	}
 

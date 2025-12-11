@@ -78,6 +78,16 @@ public class McpTransportBuilder {
 	 */
 	private final ReactorClientHttpConnector sharedConnector;
 
+	/**
+	 * SSE-specific HttpClient for long-lived connections with configurable timeouts
+	 */
+	private final HttpClient sseHttpClient;
+
+	/**
+	 * SSE-specific ReactorClientHttpConnector
+	 */
+	private final ReactorClientHttpConnector sseConnector;
+
 	public McpTransportBuilder(McpConfigValidator configValidator, McpProperties mcpProperties,
 			ObjectMapper objectMapper) {
 		this.configValidator = configValidator;
@@ -93,7 +103,8 @@ public class McpTransportBuilder {
 			.evictInBackground(Duration.ofSeconds(120))
 			.build();
 
-		// Create shared HttpClient instance with optimized configuration
+		// Create shared HttpClient instance with optimized configuration for regular
+		// transports
 		this.sharedHttpClient = HttpClient.create(connectionProvider)
 			.resolver(DefaultAddressResolverGroup.INSTANCE)
 			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000) // 30 seconds
@@ -105,7 +116,44 @@ public class McpTransportBuilder {
 		// Create shared connector
 		this.sharedConnector = new ReactorClientHttpConnector(sharedHttpClient);
 
+		// Create SSE-specific HttpClient with configurable timeouts
+		// SSE connections are long-lived and may have long periods without data
+		long sseReadTimeout = mcpProperties.getSseReadTimeoutSeconds();
+		long sseWriteTimeout = mcpProperties.getSseWriteTimeoutSeconds();
+		int sseConnectTimeout = mcpProperties.getSseConnectTimeoutMillis();
+
+		HttpClient sseHttpClientBuilder = HttpClient.create(connectionProvider)
+			.resolver(DefaultAddressResolverGroup.INSTANCE)
+			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, sseConnectTimeout)
+			.option(ChannelOption.SO_KEEPALIVE, true)
+			.option(ChannelOption.TCP_NODELAY, true);
+
+		// Configure read timeout: 0 means disabled (recommended for SSE)
+		if (sseReadTimeout > 0) {
+			sseHttpClientBuilder = sseHttpClientBuilder
+				.doOnConnected(conn -> conn.addHandlerLast(new ReadTimeoutHandler(sseReadTimeout, TimeUnit.SECONDS)));
+			logger.info("SSE read timeout configured: {} seconds", sseReadTimeout);
+		}
+		else {
+			// Disable read timeout for SSE long connections by not adding
+			// ReadTimeoutHandler
+			logger.info("SSE read timeout disabled (recommended for long-lived SSE connections)");
+		}
+
+		// Configure write timeout
+		if (sseWriteTimeout > 0) {
+			sseHttpClientBuilder = sseHttpClientBuilder
+				.doOnConnected(conn -> conn.addHandlerLast(new WriteTimeoutHandler(sseWriteTimeout, TimeUnit.SECONDS)));
+			logger.info("SSE write timeout configured: {} seconds", sseWriteTimeout);
+		}
+
+		this.sseHttpClient = sseHttpClientBuilder;
+		this.sseConnector = new ReactorClientHttpConnector(sseHttpClient);
+
 		logger.info("Initialized shared HttpClient for MCP transports with connection pool size: 200");
+		logger.info(
+				"Initialized SSE-specific HttpClient with connect timeout: {}ms, read timeout: {}s, write timeout: {}s",
+				sseConnectTimeout, sseReadTimeout == 0 ? "disabled" : sseReadTimeout, sseWriteTimeout);
 	}
 
 	/**
@@ -168,7 +216,8 @@ public class McpTransportBuilder {
 		logger.info("Building SSE transport for server: {} with baseUrl: {}, endpoint: {}", serverName, baseUrl,
 				sseEndpoint);
 
-		WebClient.Builder webClientBuilder = createWebClientBuilder(baseUrl, serverConfig);
+		// Use SSE-specific connector for long-lived connections
+		WebClient.Builder webClientBuilder = createWebClientBuilder(baseUrl, serverConfig, sseConnector);
 
 		JacksonMcpJsonMapper jsonMapper = new JacksonMcpJsonMapper(objectMapper);
 
@@ -259,7 +308,9 @@ public class McpTransportBuilder {
 		logger.info("Building Streamable HTTP transport for server: {} with Url: {} and Endpoint: {}", serverName,
 				baseUrl, streamEndpoint);
 
-		WebClient.Builder webClientBuilder = createWebClientBuilder(baseUrl, serverConfig);
+		// Use SSE-specific connector for Streamable transport (also uses long-lived
+		// connections)
+		WebClient.Builder webClientBuilder = createWebClientBuilder(baseUrl, serverConfig, sseConnector);
 
 		logger.debug("Using WebClientStreamableHttpTransport with endpoint: {} for STREAMING mode", streamEndpoint);
 		JacksonMcpJsonMapper jsonMapper = new JacksonMcpJsonMapper(objectMapper);
@@ -279,8 +330,20 @@ public class McpTransportBuilder {
 	 * @return WebClient builder
 	 */
 	private WebClient.Builder createWebClientBuilder(String baseUrl, McpServerConfig serverConfig) {
+		return createWebClientBuilder(baseUrl, serverConfig, sharedConnector);
+	}
+
+	/**
+	 * Create WebClient builder (with baseUrl) using specified HttpClient connector
+	 * @param baseUrl Base URL
+	 * @param serverConfig Server configuration (may contain custom headers)
+	 * @param connector ReactorClientHttpConnector to use
+	 * @return WebClient builder
+	 */
+	private WebClient.Builder createWebClientBuilder(String baseUrl, McpServerConfig serverConfig,
+			ReactorClientHttpConnector connector) {
 		WebClient.Builder builder = WebClient.builder()
-			.clientConnector(sharedConnector) // Use shared HttpClient connector
+			.clientConnector(connector) // Use specified HttpClient connector
 			.baseUrl(baseUrl)
 			.defaultHeader("Accept", "text/event-stream")
 			.defaultHeader("Content-Type", "application/json")

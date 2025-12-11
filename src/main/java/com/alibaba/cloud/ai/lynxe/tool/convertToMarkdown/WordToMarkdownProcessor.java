@@ -27,6 +27,9 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFPicture;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +112,8 @@ public class WordToMarkdownProcessor {
 	}
 
 	/**
-	 * Extract content from Word document using Apache POI
+	 * Extract content from Word document using Apache POI Processes both paragraphs and
+	 * tables in document order
 	 */
 	private String extractWordContent(Path sourceFile, String currentPlanId) {
 		try (FileInputStream fis = new FileInputStream(sourceFile.toFile());
@@ -119,12 +123,27 @@ public class WordToMarkdownProcessor {
 			String imageFolderName = getImageFolderName(sourceFile);
 			Path imageFolder = createImageFolder(currentPlanId, imageFolderName);
 
+			// Process all body elements (paragraphs and tables) in document order
+			// Note: XWPFDocument doesn't provide direct access to body elements in order,
+			// so we process paragraphs and tables separately
+			// For better ordering, we would need to use document.getBodyElements() if
+			// available
+
 			// Process all paragraphs
 			List<XWPFParagraph> paragraphs = document.getParagraphs();
 			for (XWPFParagraph paragraph : paragraphs) {
 				String paragraphText = processParagraph(paragraph, imageFolder);
 				if (!paragraphText.trim().isEmpty()) {
 					content.append(paragraphText).append("\n");
+				}
+			}
+
+			// Process all tables
+			List<XWPFTable> tables = document.getTables();
+			for (XWPFTable table : tables) {
+				String tableMarkdown = processTable(table);
+				if (!tableMarkdown.trim().isEmpty()) {
+					content.append("\n").append(tableMarkdown).append("\n");
 				}
 			}
 
@@ -203,6 +222,77 @@ public class WordToMarkdownProcessor {
 		}
 
 		return paragraphText.toString();
+	}
+
+	/**
+	 * Process a Word table and convert it to Markdown table format
+	 */
+	private String processTable(XWPFTable table) {
+		try {
+			StringBuilder tableMarkdown = new StringBuilder();
+			List<XWPFTableRow> rows = table.getRows();
+
+			if (rows.isEmpty()) {
+				return "";
+			}
+
+			// Process each row
+			boolean isFirstRow = true;
+			for (XWPFTableRow row : rows) {
+				List<XWPFTableCell> cells = row.getTableCells();
+				if (cells.isEmpty()) {
+					continue;
+				}
+
+				// Build table row
+				StringBuilder rowMarkdown = new StringBuilder("|");
+				for (XWPFTableCell cell : cells) {
+					String cellText = getCellText(cell);
+					// Escape pipe characters in cell content
+					cellText = cellText.replace("|", "\\|");
+					// Replace newlines with <br> for markdown tables
+					cellText = cellText.replace("\n", "<br>");
+					rowMarkdown.append(" ").append(cellText.trim()).append(" |");
+				}
+				rowMarkdown.append("\n");
+				tableMarkdown.append(rowMarkdown);
+
+				// Add separator row after first row (header)
+				if (isFirstRow) {
+					StringBuilder separator = new StringBuilder("|");
+					for (int i = 0; i < cells.size(); i++) {
+						separator.append(" --- |");
+					}
+					separator.append("\n");
+					tableMarkdown.append(separator);
+					isFirstRow = false;
+				}
+			}
+
+			return tableMarkdown.toString();
+		}
+		catch (Exception e) {
+			log.error("Error processing table: {}", e.getMessage());
+			return "";
+		}
+	}
+
+	/**
+	 * Extract text content from a table cell
+	 */
+	private String getCellText(XWPFTableCell cell) {
+		StringBuilder cellText = new StringBuilder();
+		List<XWPFParagraph> paragraphs = cell.getParagraphs();
+		for (XWPFParagraph paragraph : paragraphs) {
+			String text = paragraph.getText();
+			if (text != null && !text.trim().isEmpty()) {
+				if (cellText.length() > 0) {
+					cellText.append(" ");
+				}
+				cellText.append(text.trim());
+			}
+		}
+		return cellText.toString();
 	}
 
 	/**

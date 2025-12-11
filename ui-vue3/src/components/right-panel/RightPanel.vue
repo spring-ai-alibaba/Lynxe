@@ -118,23 +118,6 @@
 
           <div class="agent-info" v-if="selectedStep.agentExecution">
             <div class="info-item">
-              <span class="label">{{ t('rightPanel.executingAgent') }}:</span>
-              <span
-                class="value"
-                :title="
-                  selectedStep.agentExecution.agentName === 'ConfigurableDynaAgent'
-                    ? t('chat.clickToViewExecutionDetails')
-                    : ''
-                "
-              >
-                {{
-                  selectedStep.agentExecution.agentName === 'ConfigurableDynaAgent'
-                    ? t('chat.funcAgentExecutionDetails')
-                    : selectedStep.agentExecution.agentName
-                }}
-              </span>
-            </div>
-            <div class="info-item">
               <span class="label">{{ t('rightPanel.callingModel') }}:</span>
               <span class="value">{{ selectedStep.agentExecution.modelName }}</span>
             </div>
@@ -180,9 +163,6 @@
                 >
                   <div class="step-header">
                     <span class="step-number">#{{ index + 1 }}</span>
-                    <span class="step-status" :class="tas.status">{{
-                      tas.status || t('rightPanel.executing')
-                    }}</span>
                   </div>
 
                   <!-- Think section - strictly follow right-sidebar.js logic -->
@@ -777,19 +757,19 @@ defineExpose({
 
 /* Step basic information */
 .step-info {
-  padding: 20px;
+  padding: 12px 16px;
   margin: 0 20px;
   background: rgba(41, 42, 45, 0.8);
   border-radius: 8px;
-  margin-bottom: 16px;
-  min-height: 100px; /* Ensure minimum height */
+  margin-bottom: 12px;
+  min-height: 60px; /* Ensure minimum height */
 
   h3 {
     color: #ffffff;
-    margin: 0 0 16px 0;
-    font-size: 18px;
+    margin: 0 0 12px 0;
+    font-size: 14px;
     font-weight: 600;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
     border-bottom: 2px solid #667eea;
   }
 }
@@ -826,12 +806,12 @@ defineExpose({
 
 /* Step information styles - for fixed top */
 .agent-info {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 
   .info-item {
     display: flex;
-    margin-bottom: 8px;
-    font-size: 14px;
+    margin-bottom: 6px;
+    font-size: 12px;
     line-height: 1.4;
 
     .label {
@@ -839,12 +819,14 @@ defineExpose({
       font-weight: 600;
       color: #888888;
       flex-shrink: 0;
+      font-size: 12px;
     }
 
     .value {
       flex: 1;
       color: #cccccc;
       word-break: break-word;
+      font-size: 12px;
 
       &.success {
         color: #27ae60;
@@ -854,17 +836,17 @@ defineExpose({
 }
 
 .execution-status {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 
   .status-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 
     .status-icon {
-      font-size: 16px;
+      font-size: 14px;
 
       &.success {
         color: #27ae60;
@@ -882,6 +864,7 @@ defineExpose({
     .status-text {
       color: #cccccc;
       font-weight: 500;
+      font-size: 12px;
     }
   }
 }
@@ -1081,28 +1064,6 @@ defineExpose({
       font-weight: 600;
       color: #667eea;
       font-size: 14px;
-    }
-
-    .step-status {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 500;
-
-      &.completed {
-        background: rgba(39, 174, 96, 0.2);
-        color: #27ae60;
-      }
-
-      &.running {
-        background: rgba(52, 152, 219, 0.2);
-        color: #3498db;
-      }
-
-      &.pending {
-        background: rgba(243, 156, 18, 0.2);
-        color: #f39c12;
-      }
     }
   }
 

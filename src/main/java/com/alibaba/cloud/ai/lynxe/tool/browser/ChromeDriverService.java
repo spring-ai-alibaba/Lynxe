@@ -406,7 +406,7 @@ public class ChromeDriverService implements IChromeDriverService {
 				if (browserPath != null) {
 					java.nio.file.Path browsersDir = java.nio.file.Paths.get(browserPath);
 					if (!java.nio.file.Files.exists(browsersDir)) {
-						log.warn(
+						log.debug(
 								"Browser binaries directory does not exist: {}. Playwright will download browsers on first use.",
 								browserPath);
 					}
@@ -669,18 +669,21 @@ public class ChromeDriverService implements IChromeDriverService {
 					throw new RuntimeException("Browser context was created but is null");
 				}
 
-				// Set up browser crash listener for better error handling
+				// Set up browser disconnect listener for cleanup
+				// Note: This event fires both on normal close and unexpected crashes
 				if (browser != null) {
 					browser.onDisconnected((Browser disconnectedBrowser) -> {
-						log.error("Browser disconnected unexpectedly - possible crash detected");
+						// Use DEBUG level since this is expected during normal browser
+						// shutdown
+						log.debug("Browser disconnected for planId: {}", findPlanIdForBrowser(disconnectedBrowser));
 						// Mark driver as unhealthy for this planId
 						String disconnectedPlanId = findPlanIdForBrowser(disconnectedBrowser);
 						if (disconnectedPlanId != null) {
-							log.warn("Removing crashed browser driver for planId: {}", disconnectedPlanId);
+							log.debug("Removing disconnected browser driver for planId: {}", disconnectedPlanId);
 							drivers.remove(disconnectedPlanId);
 						}
 					});
-					log.debug("Browser crash listener registered");
+					log.debug("Browser disconnect listener registered");
 				}
 
 			}

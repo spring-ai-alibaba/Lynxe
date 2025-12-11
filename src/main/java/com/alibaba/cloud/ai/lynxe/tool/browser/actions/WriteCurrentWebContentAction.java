@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,9 @@ public class WriteCurrentWebContentAction extends BrowserAction {
 
 			// Sanitize title to create valid filename
 			String sanitizedTitle = sanitizeFileName(title);
-			String fileName = sanitizedTitle + ".yaml";
+			// Generate random number (3-4 digits: 100-9999) to append to filename
+			int randomNumber = ThreadLocalRandom.current().nextInt(100, 10000);
+			String fileName = sanitizedTitle + "_" + randomNumber + ".yaml";
 
 			// Get directory path - use rootPlanId if available, otherwise use
 			// currentPlanId

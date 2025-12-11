@@ -30,13 +30,13 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 const backHome = () => {
-  router.push('/home')
+  router.push('/direct')
 }
 </script>
 

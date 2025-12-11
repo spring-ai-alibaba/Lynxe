@@ -50,14 +50,6 @@
           >
             <Icon icon="carbon:copy" />
           </button>
-
-          <button
-            class="action-btn regenerate-btn"
-            @click="handleRegenerate"
-            :title="$t('chat.regenerateResponse')"
-          >
-            <Icon icon="carbon:renew" />
-          </button>
         </div>
       </div>
 
@@ -91,10 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { Icon } from '@iconify/vue'
-import { useMessageFormatting } from './composables/useMessageFormatting'
-import UserInputForm from './UserInputForm.vue'
 import type { UserInputWaitState } from '@/types/plan-execution-record'
+import { Icon } from '@iconify/vue'
+import UserInputForm from './UserInputForm.vue'
+import { useMessageFormatting } from './composables/useMessageFormatting'
 // Import highlight.js CSS for syntax highlighting
 import 'highlight.js/styles/atom-one-dark.css'
 
@@ -110,7 +102,6 @@ interface Props {
 
 interface Emits {
   (e: 'copy'): void
-  (e: 'regenerate'): void
   (e: 'retry'): void
   (e: 'user-input-submitted', inputData: Record<string, unknown>): void
 }
@@ -132,10 +123,6 @@ const copyToClipboard = async () => {
   } catch (error) {
     console.error('Failed to copy to clipboard:', error)
   }
-}
-
-const handleRegenerate = () => {
-  emit('regenerate')
 }
 
 const handleRetry = () => {

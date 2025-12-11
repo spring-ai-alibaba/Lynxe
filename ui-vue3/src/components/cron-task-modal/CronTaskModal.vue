@@ -228,16 +228,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { Icon } from '@iconify/vue'
-import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { CronApiService } from '@/api/cron-api-service'
-import type { CronConfig } from '@/types/cron-task'
-import TaskDetailModal from './TaskDetailModal.vue'
-import { useTaskStore } from '@/stores/task'
 import { useToast } from '@/plugins/useToast'
+import { useTaskStore } from '@/stores/task'
+import type { CronConfig } from '@/types/cron-task'
 import { CronTaskUtils } from '@/utils/cron-task-utils'
+import { Icon } from '@iconify/vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import TaskDetailModal from './TaskDetailModal.vue'
 const router = useRouter()
 const taskStore = useTaskStore()
 const toast = useToast()

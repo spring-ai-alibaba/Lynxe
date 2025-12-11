@@ -47,18 +47,19 @@
         :class="getAgentStatusClass(agentExecution.status)"
       >
         <!-- Agent execution header -->
-        <div class="agent-header" @click="handleAgentClick(agentExecution)">
+        <div
+          class="agent-header"
+          @click="handleAgentClick(agentExecution)"
+          :title="
+            agentExecution.agentName === 'ConfigurableDynaAgent'
+              ? $t('chat.clickToViewExecutionDetails')
+              : ''
+          "
+        >
           <div class="agent-info">
             <Icon :icon="getAgentStatusIcon(agentExecution.status)" class="agent-status-icon" />
             <div class="agent-details">
-              <div
-                class="agent-name"
-                :title="
-                  agentExecution.agentName === 'ConfigurableDynaAgent'
-                    ? $t('chat.clickToViewExecutionDetails')
-                    : ''
-                "
-              >
+              <div class="agent-name">
                 {{
                   agentExecution.agentName === 'ConfigurableDynaAgent'
                     ? $t('chat.funcAgentExecutionDetails')
@@ -72,7 +73,6 @@
             <div class="agent-status-badge" :class="getAgentStatusClass(agentExecution.status)">
               {{ getAgentStatusText(agentExecution.status) }}
             </div>
-            <Icon icon="carbon:arrow-right" class="step-select-icon" />
           </div>
         </div>
 
@@ -418,12 +418,6 @@ const formatToolParameters = (parameters?: string): string => {
               background: rgba(156, 163, 175, 0.2);
               color: #9ca3af;
             }
-          }
-
-          .step-select-icon {
-            font-size: 16px;
-            color: #667eea;
-            transition: transform 0.2s ease;
           }
         }
       }
