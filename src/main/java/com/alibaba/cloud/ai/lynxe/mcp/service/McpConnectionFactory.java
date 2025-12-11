@@ -282,6 +282,13 @@ public class McpConnectionFactory {
 			return String.format("JSON parsing error: %s. Server response may be malformed.", rootCauseMessage);
 		}
 
+		// Check for transport enqueue errors (indicates process died or streams closed)
+		if (rootCauseMessage != null && rootCauseMessage.contains("Failed to enqueue message")) {
+			return String.format(
+					"Transport enqueue failed: %s. The MCP server process may have died or stdin/stdout streams are closed. This typically indicates: 1) Process crashed or exited unexpectedly, 2) Transport was closed but still being used, 3) Streams were closed. Check server stderr logs and process status.",
+					rootCauseMessage);
+		}
+
 		return String.format("Error type: %s, Message: %s. Check full stack trace for details.", rootCauseType,
 				rootCauseMessage);
 	}
@@ -365,6 +372,12 @@ public class McpConnectionFactory {
 						|| lowerMessage.contains("command") || lowerMessage.contains("exec")
 						|| lowerMessage.contains("spawn");
 			}
+		}
+
+		// Check for transport enqueue errors (indicates process died or streams closed)
+		String message = e.getMessage();
+		if (message != null && message.contains("Failed to enqueue message")) {
+			return true;
 		}
 
 		// Check exception class name

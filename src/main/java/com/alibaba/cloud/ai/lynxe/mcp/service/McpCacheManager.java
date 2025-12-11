@@ -435,6 +435,27 @@ public class McpCacheManager {
 			return false;
 		}
 
+		// Check for "Failed to enqueue message" error (STDIO transport error)
+		// This indicates the MCP server process may have died or streams are closed
+		String message = e.getMessage();
+		if (message != null && message.contains("Failed to enqueue message")) {
+			return true;
+		}
+
+		// Check exception and all causes in the chain for "Failed to enqueue message"
+		Throwable cause = e;
+		int depth = 0;
+		while (cause != null && depth < 10) { // Limit depth to prevent infinite loops
+			if (cause instanceof RuntimeException || cause instanceof Exception) {
+				String causeMessage = cause.getMessage();
+				if (causeMessage != null && causeMessage.contains("Failed to enqueue message")) {
+					return true;
+				}
+			}
+			cause = cause.getCause();
+			depth++;
+		}
+
 		// Check for timeout exceptions
 		if (e instanceof TimeoutException || e instanceof java.util.concurrent.TimeoutException) {
 			return true;
@@ -448,9 +469,9 @@ public class McpCacheManager {
 
 		// Check for WebClientResponseException with ReadTimeoutException cause
 		if (className.contains("WebClientResponseException") || className.contains("WebClientException")) {
-			Throwable cause = e.getCause();
-			if (cause != null) {
-				String causeClassName = cause.getClass().getName();
+			Throwable cause2 = e.getCause();
+			if (cause2 != null) {
+				String causeClassName = cause2.getClass().getName();
 				if (causeClassName.contains("ReadTimeoutException") || causeClassName.contains("ReadTimeout")) {
 					return true;
 				}
@@ -459,7 +480,6 @@ public class McpCacheManager {
 
 		// Check for IOException (connection closed, network errors)
 		if (e instanceof IOException) {
-			String message = e.getMessage();
 			if (message != null) {
 				String lowerMessage = message.toLowerCase();
 				return lowerMessage.contains("connection") || lowerMessage.contains("closed")
@@ -475,13 +495,13 @@ public class McpCacheManager {
 			return true;
 		}
 
-		// Check message
-		String message = e.getMessage();
+		// Check message for connection-related keywords
 		if (message != null) {
 			String lowerMessage = message.toLowerCase();
 			return lowerMessage.contains("timeout") || lowerMessage.contains("timed out")
 					|| lowerMessage.contains("connection") || lowerMessage.contains("closed")
-					|| lowerMessage.contains("read timeout");
+					|| lowerMessage.contains("read timeout") || lowerMessage.contains("transport")
+					|| lowerMessage.contains("process") && lowerMessage.contains("died");
 		}
 
 		return false;
@@ -633,14 +653,48 @@ public class McpCacheManager {
 				lastException = e;
 
 				if (isConnectionError(e)) {
-					logger.warn("Connection error during execution for server: {} (attempt {}/{}): {}", serverName,
-							retryCount + 1, maxRetries + 1, e.getMessage());
-					// Fail-fast: mark connection as closed and trigger background rebuild
+					// Enhanced logging with connection state for debugging
+					ConnectionState currentState = wrapper.getState();
+					int pendingReqs = wrapper.getPendingRequests().get();
+
+					// Special handling for "Failed to enqueue message" error
+					boolean isEnqueueError = e.getMessage() != null
+							&& e.getMessage().contains("Failed to enqueue message");
+
+					if (isEnqueueError) {
+						logger.error(
+								"Transport enqueue failed for server: {} (state: {}, pending: {}, attempt: {}/{}) - "
+										+ "MCP server process may have died or streams are closed. "
+										+ "Triggering immediate connection rebuild.",
+								serverName, currentState, pendingReqs, retryCount + 1, maxRetries + 1, e);
+					}
+					else {
+						logger.warn(
+								"Connection error during execution for server: {} (state: {}, pending: {}, attempt: {}/{}): {}",
+								serverName, currentState, pendingReqs, retryCount + 1, maxRetries + 1, e.getMessage());
+					}
+
+					// Mark connection as closed and trigger background rebuild
 					handleConnectionError(serverName);
 
 					if (retryCount < maxRetries) {
-						// Fail-fast: don't wait, let background task handle rebuild
-						// Retry immediately (background task will rebuild connection)
+						// For enqueue errors, wait a bit longer to allow process restart
+						// Use exponential backoff: 1s, 2s, 3s...
+						if (isEnqueueError) {
+							long waitTime = 1000L * (retryCount + 1);
+							try {
+								logger.debug("Waiting {}ms before retry for enqueue error (server: {})", waitTime,
+										serverName);
+								Thread.sleep(waitTime);
+							}
+							catch (InterruptedException ie) {
+								Thread.currentThread().interrupt();
+								logger.warn("Retry wait interrupted for server: {}", serverName);
+								throw new IOException("Retry interrupted for server: " + serverName, ie);
+							}
+						}
+						// For other connection errors, retry immediately (fail-fast)
+						// Background task will handle rebuild
 						retryCount++;
 						continue;
 					}
