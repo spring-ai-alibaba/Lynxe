@@ -46,12 +46,10 @@ import jakarta.annotation.PreDestroy;
 
 /**
  * MCP Cache Manager with fail-fast design
- * 
- * Key features:
- * - Single connection per server
- * - Fail-fast: main thread returns immediately, background tasks handle connection operations
- * - Automatic health check and connection rebuild
- * - No blocking operations on main/EventLoop threads
+ *
+ * Key features: - Single connection per server - Fail-fast: main thread returns
+ * immediately, background tasks handle connection operations - Automatic health check and
+ * connection rebuild - No blocking operations on main/EventLoop threads
  */
 @Component
 public class McpCacheManager {
@@ -62,7 +60,9 @@ public class McpCacheManager {
 	 * Connection state enum
 	 */
 	private enum ConnectionState {
+
 		CONNECTED, CLOSING, CLOSED, RECONNECTING
+
 	}
 
 	/**
@@ -83,7 +83,8 @@ public class McpCacheManager {
 		public ConnectionWrapper(String serverName, McpServiceEntity serviceEntity) {
 			this.serverName = serverName;
 			this.serviceEntity = serviceEntity;
-			this.state = new AtomicReference<>(serviceEntity != null ? ConnectionState.CONNECTED : ConnectionState.RECONNECTING);
+			this.state = new AtomicReference<>(
+					serviceEntity != null ? ConnectionState.CONNECTED : ConnectionState.RECONNECTING);
 			this.rebuildLock = new ReentrantLock();
 			this.pendingRequests = new AtomicInteger(0);
 		}
@@ -144,7 +145,8 @@ public class McpCacheManager {
 	});
 
 	/**
-	 * Thread pool for blocking connection operations to avoid blocking Netty EventLoop threads
+	 * Thread pool for blocking connection operations to avoid blocking Netty EventLoop
+	 * threads
 	 */
 	private final ExecutorService connectionExecutor = Executors.newCachedThreadPool(r -> {
 		Thread t = new Thread(r, "MCP-Connection");
@@ -203,9 +205,8 @@ public class McpCacheManager {
 	}
 
 	/**
-	 * Get connection for a server (fail-fast, non-blocking)
-	 * Main thread returns immediately, background task handles connection creation/rebuild
-	 * 
+	 * Get connection for a server (fail-fast, non-blocking) Main thread returns
+	 * immediately, background task handles connection creation/rebuild
 	 * @param serverName Server name
 	 * @return Connection wrapper if connected, null otherwise (fail-fast)
 	 */
@@ -216,7 +217,8 @@ public class McpCacheManager {
 			if (state == ConnectionState.CONNECTED) {
 				return wrapper;
 			}
-			// If connection is closed or closing, trigger background rebuild (non-blocking)
+			// If connection is closed or closing, trigger background rebuild
+			// (non-blocking)
 			if (state == ConnectionState.CLOSED || state == ConnectionState.CLOSING) {
 				triggerBackgroundRebuild(serverName);
 				return null; // Fail-fast: return immediately
@@ -241,7 +243,6 @@ public class McpCacheManager {
 
 	/**
 	 * Trigger background connection creation (non-blocking)
-	 * 
 	 * @param serverName Server name
 	 */
 	private void triggerBackgroundCreation(String serverName) {
@@ -297,7 +298,6 @@ public class McpCacheManager {
 
 	/**
 	 * Trigger background connection rebuild (non-blocking)
-	 * 
 	 * @param serverName Server name
 	 */
 	private void triggerBackgroundRebuild(String serverName) {
@@ -318,9 +318,9 @@ public class McpCacheManager {
 	}
 
 	/**
-	 * Get connection with automatic retry on connection errors (fail-fast)
-	 * This method quickly checks connection status and returns, relying on background tasks for rebuild
-	 * 
+	 * Get connection with automatic retry on connection errors (fail-fast) This method
+	 * quickly checks connection status and returns, relying on background tasks for
+	 * rebuild
 	 * @param serverName Server name
 	 * @return Connection wrapper if connected, null otherwise (fail-fast)
 	 */
@@ -344,7 +344,6 @@ public class McpCacheManager {
 
 	/**
 	 * Rebuild connection for a server (executed in background thread)
-	 * 
 	 * @param serverName Server name
 	 */
 	private void rebuildConnection(String serverName) {
@@ -428,7 +427,6 @@ public class McpCacheManager {
 
 	/**
 	 * Check if exception is connection-related and should trigger rebuild
-	 * 
 	 * @param e Exception to check
 	 * @return true if connection-related
 	 */
@@ -490,9 +488,9 @@ public class McpCacheManager {
 	}
 
 	/**
-	 * Handle connection error by marking connection as closed and triggering background rebuild (fail-fast)
-	 * This method should be called when a connection error is detected during request execution
-	 * 
+	 * Handle connection error by marking connection as closed and triggering background
+	 * rebuild (fail-fast) This method should be called when a connection error is
+	 * detected during request execution
 	 * @param serverName Server name
 	 */
 	public void handleConnectionError(String serverName) {
@@ -501,7 +499,8 @@ public class McpCacheManager {
 			ConnectionState currentState = wrapper.getState();
 			// Only mark as closed if currently connected (avoid race conditions)
 			if (currentState == ConnectionState.CONNECTED) {
-				logger.warn("Connection error detected for server: {}, marking as closed and triggering background rebuild",
+				logger.warn(
+						"Connection error detected for server: {}, marking as closed and triggering background rebuild",
 						serverName);
 				// Fail-fast: mark as closed and trigger background rebuild, don't wait
 				wrapper.setState(ConnectionState.CONNECTED, ConnectionState.CLOSED);
@@ -516,7 +515,6 @@ public class McpCacheManager {
 
 	/**
 	 * Schedule periodic health check for a connection
-	 * 
 	 * @param serverName Server name
 	 */
 	private void scheduleHealthCheck(String serverName) {
@@ -537,12 +535,12 @@ public class McpCacheManager {
 		}, HEALTH_CHECK_INTERVAL_SECONDS, HEALTH_CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS);
 
 		healthCheckTasks.put(serverName, task);
-		logger.debug("Scheduled health check for server: {} (interval: {}s)", serverName, HEALTH_CHECK_INTERVAL_SECONDS);
+		logger.debug("Scheduled health check for server: {} (interval: {}s)", serverName,
+				HEALTH_CHECK_INTERVAL_SECONDS);
 	}
 
 	/**
 	 * Perform health check on a connection and rebuild if needed
-	 * 
 	 * @param serverName Server name
 	 */
 	private void performHealthCheck(String serverName) {
@@ -567,14 +565,16 @@ public class McpCacheManager {
 			// Check pending requests threshold
 			int pendingRequests = wrapper.getPendingRequests().get();
 			if (pendingRequests > MAX_PENDING_REQUESTS_THRESHOLD) {
-				logger.warn("Health check: Too many pending requests ({}) for server {}, marking as closed", pendingRequests, serverName);
+				logger.warn("Health check: Too many pending requests ({}) for server {}, marking as closed",
+						pendingRequests, serverName);
 				wrapper.setState(ConnectionState.CONNECTED, ConnectionState.CLOSED);
 				triggerBackgroundRebuild(serverName);
 				return;
 			}
 
 			// Connection appears healthy
-			logger.debug("Health check: Connection for server {} is healthy (pending requests: {})", serverName, pendingRequests);
+			logger.debug("Health check: Connection for server {} is healthy (pending requests: {})", serverName,
+					pendingRequests);
 		}
 		else if (state == ConnectionState.CLOSED || state == ConnectionState.CLOSING) {
 			// Connection is closed, trigger rebuild
@@ -586,7 +586,6 @@ public class McpCacheManager {
 
 	/**
 	 * Cancel health check for a server
-	 * 
 	 * @param serverName Server name
 	 */
 	private void cancelHealthCheck(String serverName) {
@@ -598,9 +597,8 @@ public class McpCacheManager {
 	}
 
 	/**
-	 * Execute a function with automatic retry on connection errors
-	 * This is a helper method that can be used to wrap tool execution with retry logic
-	 * 
+	 * Execute a function with automatic retry on connection errors This is a helper
+	 * method that can be used to wrap tool execution with retry logic
 	 * @param serverName Server name
 	 * @param function Function to execute
 	 * @return Result of function execution
@@ -660,7 +658,6 @@ public class McpCacheManager {
 
 	/**
 	 * Get MCP services (maintains interface compatibility)
-	 * 
 	 * @param planId Plan ID (not used, maintained for compatibility)
 	 * @return MCP service entity mapping
 	 */
@@ -680,7 +677,6 @@ public class McpCacheManager {
 
 	/**
 	 * Get MCP service entity list (maintains interface compatibility)
-	 * 
 	 * @param planId Plan ID
 	 * @return MCP service entity list
 	 */
@@ -690,7 +686,6 @@ public class McpCacheManager {
 
 	/**
 	 * Invalidate cache for a plan (triggers connection rebuild)
-	 * 
 	 * @param planId Plan ID (not used, maintained for compatibility)
 	 */
 	public void invalidateCache(String planId) {
@@ -741,7 +736,6 @@ public class McpCacheManager {
 
 	/**
 	 * Safely close a single MCP client
-	 * 
 	 * @param serviceEntity Service entity containing the client
 	 * @param serverName Server name for logging
 	 * @return true if client was closed successfully, false otherwise
@@ -759,7 +753,8 @@ public class McpCacheManager {
 		try {
 			logger.debug("Closing MCP client for server: {}", serverName);
 			try {
-				client.closeGracefully().timeout(java.time.Duration.ofSeconds(5))
+				client.closeGracefully()
+					.timeout(java.time.Duration.ofSeconds(5))
 					.doOnSuccess(v -> logger.debug("MCP client closed gracefully for server: {}", serverName))
 					.doOnError(e -> logger.warn("Error during graceful close for server: {}, will force close",
 							serverName, e))
@@ -800,7 +795,6 @@ public class McpCacheManager {
 
 	/**
 	 * Check connection health and rebuild if necessary
-	 * 
 	 * @param serverName Server name
 	 * @return true if connection is healthy
 	 */
@@ -864,15 +858,14 @@ public class McpCacheManager {
 
 	/**
 	 * Get connection statistics for monitoring
-	 * 
 	 * @return Map of server name to connection stats
 	 */
 	public Map<String, ConnectionStats> getConnectionStats() {
 		Map<String, ConnectionStats> stats = new ConcurrentHashMap<>();
 		for (Map.Entry<String, ConnectionWrapper> entry : connections.entrySet()) {
 			ConnectionWrapper wrapper = entry.getValue();
-			ConnectionStats stat = new ConnectionStats(wrapper.getState().name(),
-					wrapper.getPendingRequests().get(), wrapper.getServiceEntity() != null);
+			ConnectionStats stat = new ConnectionStats(wrapper.getState().name(), wrapper.getPendingRequests().get(),
+					wrapper.getServiceEntity() != null);
 			stats.put(entry.getKey(), stat);
 		}
 		return stats;

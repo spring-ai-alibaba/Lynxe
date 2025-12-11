@@ -85,8 +85,8 @@ public class McpProperties {
 	private int requestRetryCount = 3;
 
 	/**
-	 * Connection rebuild delay in milliseconds before rebuilding connection after timeout.
-	 * Default: 100ms
+	 * Connection rebuild delay in milliseconds before rebuilding connection after
+	 * timeout. Default: 100ms
 	 */
 	private long connectionRebuildDelayMillis = 100;
 

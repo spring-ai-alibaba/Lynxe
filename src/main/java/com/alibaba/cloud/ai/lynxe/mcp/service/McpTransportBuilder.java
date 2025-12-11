@@ -103,7 +103,8 @@ public class McpTransportBuilder {
 			.evictInBackground(Duration.ofSeconds(120))
 			.build();
 
-		// Create shared HttpClient instance with optimized configuration for regular transports
+		// Create shared HttpClient instance with optimized configuration for regular
+		// transports
 		this.sharedHttpClient = HttpClient.create(connectionProvider)
 			.resolver(DefaultAddressResolverGroup.INSTANCE)
 			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 30000) // 30 seconds
@@ -129,19 +130,20 @@ public class McpTransportBuilder {
 
 		// Configure read timeout: 0 means disabled (recommended for SSE)
 		if (sseReadTimeout > 0) {
-			sseHttpClientBuilder = sseHttpClientBuilder.doOnConnected(
-					conn -> conn.addHandlerLast(new ReadTimeoutHandler(sseReadTimeout, TimeUnit.SECONDS)));
+			sseHttpClientBuilder = sseHttpClientBuilder
+				.doOnConnected(conn -> conn.addHandlerLast(new ReadTimeoutHandler(sseReadTimeout, TimeUnit.SECONDS)));
 			logger.info("SSE read timeout configured: {} seconds", sseReadTimeout);
 		}
 		else {
-			// Disable read timeout for SSE long connections by not adding ReadTimeoutHandler
+			// Disable read timeout for SSE long connections by not adding
+			// ReadTimeoutHandler
 			logger.info("SSE read timeout disabled (recommended for long-lived SSE connections)");
 		}
 
 		// Configure write timeout
 		if (sseWriteTimeout > 0) {
-			sseHttpClientBuilder = sseHttpClientBuilder.doOnConnected(
-					conn -> conn.addHandlerLast(new WriteTimeoutHandler(sseWriteTimeout, TimeUnit.SECONDS)));
+			sseHttpClientBuilder = sseHttpClientBuilder
+				.doOnConnected(conn -> conn.addHandlerLast(new WriteTimeoutHandler(sseWriteTimeout, TimeUnit.SECONDS)));
 			logger.info("SSE write timeout configured: {} seconds", sseWriteTimeout);
 		}
 
@@ -149,7 +151,8 @@ public class McpTransportBuilder {
 		this.sseConnector = new ReactorClientHttpConnector(sseHttpClient);
 
 		logger.info("Initialized shared HttpClient for MCP transports with connection pool size: 200");
-		logger.info("Initialized SSE-specific HttpClient with connect timeout: {}ms, read timeout: {}s, write timeout: {}s",
+		logger.info(
+				"Initialized SSE-specific HttpClient with connect timeout: {}ms, read timeout: {}s, write timeout: {}s",
 				sseConnectTimeout, sseReadTimeout == 0 ? "disabled" : sseReadTimeout, sseWriteTimeout);
 	}
 
@@ -305,7 +308,8 @@ public class McpTransportBuilder {
 		logger.info("Building Streamable HTTP transport for server: {} with Url: {} and Endpoint: {}", serverName,
 				baseUrl, streamEndpoint);
 
-		// Use SSE-specific connector for Streamable transport (also uses long-lived connections)
+		// Use SSE-specific connector for Streamable transport (also uses long-lived
+		// connections)
 		WebClient.Builder webClientBuilder = createWebClientBuilder(baseUrl, serverConfig, sseConnector);
 
 		logger.debug("Using WebClientStreamableHttpTransport with endpoint: {} for STREAMING mode", streamEndpoint);

@@ -152,7 +152,8 @@ public class McpConnectionFactory {
 						mcpServerName, attempt, maxRetries, mcpProperties.getInitializationTimeout().getSeconds());
 
 				long initStartTime = System.currentTimeMillis();
-				// Use subscribeOn to ensure block() executes on a blocking thread, not Netty EventLoop
+				// Use subscribeOn to ensure block() executes on a blocking thread, not
+				// Netty EventLoop
 				mcpAsyncClient.initialize()
 					.timeout(mcpProperties.getInitializationTimeout())
 					.subscribeOn(Schedulers.fromExecutor(blockingExecutor))
@@ -162,8 +163,8 @@ public class McpConnectionFactory {
 					})
 					.doOnError(error -> {
 						long initDuration = System.currentTimeMillis() - initStartTime;
-						logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName, initDuration,
-								error.getMessage(), error);
+						logger.error("Failed to initialize MCP client for {} after {}ms: {}", mcpServerName,
+								initDuration, error.getMessage(), error);
 					})
 					.block();
 

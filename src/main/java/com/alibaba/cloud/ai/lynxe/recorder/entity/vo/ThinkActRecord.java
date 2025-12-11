@@ -101,12 +101,14 @@ public class ThinkActRecord {
 
 	// Tool name used for action (if applicable)
 	// @deprecated This field is abandoned and kept only for database compatibility.
-	// Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	// Use actToolInfoList instead, which contains ActToolInfo objects with name and
+	// parameters.
 	private String toolName;
 
 	// Tool parameters used for action (serialized, if applicable)
 	// @deprecated This field is abandoned and kept only for database compatibility.
-	// Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	// Use actToolInfoList instead, which contains ActToolInfo objects with name and
+	// parameters.
 	private String toolParameters;
 
 	// Action tool information(When disabling parallel tool calls, there is always only
@@ -307,32 +309,36 @@ public class ThinkActRecord {
 	}
 
 	/**
-	 * @deprecated This method is abandoned and kept only for database compatibility.
-	 * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
 	 */
 	public String getToolName() {
 		return toolName;
 	}
 
 	/**
-	 * @deprecated This method is abandoned and kept only for database compatibility.
-	 * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
 	 */
 	public void setToolName(String toolName) {
 		this.toolName = toolName;
 	}
 
 	/**
-	 * @deprecated This method is abandoned and kept only for database compatibility.
-	 * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
 	 */
 	public String getToolParameters() {
 		return toolParameters;
 	}
 
 	/**
-	 * @deprecated This method is abandoned and kept only for database compatibility.
-	 * Use actToolInfoList instead, which contains ActToolInfo objects with name and parameters.
+	 * @deprecated This method is abandoned and kept only for database compatibility. Use
+	 * actToolInfoList instead, which contains ActToolInfo objects with name and
+	 * parameters.
 	 */
 	public void setToolParameters(String toolParameters) {
 		this.toolParameters = toolParameters;
