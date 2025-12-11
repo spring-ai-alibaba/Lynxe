@@ -171,8 +171,8 @@ public class DynamicAgent extends ReActAgent {
 			Map<String, Object> initialAgentSetting, UserInputService userInputService, String modelName,
 			StreamingResponseHandler streamingResponseHandler, ExecutionStep step, PlanIdDispatcher planIdDispatcher,
 			LynxeEventPublisher lynxeEventPublisher, AgentInterruptionHelper agentInterruptionHelper,
-			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService, MemoryService memoryService,
-			ConversationMemoryLimitService conversationMemoryLimitService,
+			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService,
+			MemoryService memoryService, ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		super(llmService, planExecutionRecorder, lynxeProperties, initialAgentSetting, step, planIdDispatcher);
 		this.objectMapper = objectMapper;
@@ -412,15 +412,13 @@ public class DynamicAgent extends ReActAgent {
 					String thinkActId = planIdDispatcher.generateThinkActId();
 
 					actToolInfoList = new ArrayList<>();
-					// Generate unique toolCallId for each tool when multiple tools are
-					// present
-					// This ensures each tool has its own toolCallId for proper sub-plan
-					// linkage
+					// Generate unique toolCallId for each tool when multiple tools are present
+					// This ensures each tool has its own toolCallId for proper sub-plan linkage
 					for (ToolCall toolCall : toolCalls) {
-						String toolCallIdForTool = (toolCalls.size() > 1) ? planIdDispatcher.generateToolCallId()
-								: toolcallId;
-						ActToolParam actToolInfo = new ActToolParam(toolCall.name(), toolCall.arguments(),
-								toolCallIdForTool);
+						String toolCallIdForTool = (toolCalls.size() > 1) 
+							? planIdDispatcher.generateToolCallId() 
+							: toolcallId;
+						ActToolParam actToolInfo = new ActToolParam(toolCall.name(), toolCall.arguments(), toolCallIdForTool);
 						actToolInfoList.add(actToolInfo);
 					}
 
@@ -826,8 +824,7 @@ public class DynamicAgent extends ReActAgent {
 			ToolContext parentToolContext = new ToolContext(toolContextMap);
 
 			// Create execution requests for each tool with their corresponding toolCallId
-			// This ensures the toolCallId used during execution matches the one in
-			// ActToolParam
+			// This ensures the toolCallId used during execution matches the one in ActToolParam
 			List<ParallelExecutionService.ParallelExecutionRequest> executions = new ArrayList<>();
 			for (int i = 0; i < toolCalls.size() && i < actToolInfoList.size(); i++) {
 				ToolCall toolCall = toolCalls.get(i);

@@ -78,13 +78,13 @@ public class ConfigurableDynaAgent extends DynamicAgent {
 			Map<String, Object> initialAgentSetting, UserInputService userInputService, String modelName,
 			StreamingResponseHandler streamingResponseHandler, ExecutionStep step, PlanIdDispatcher planIdDispatcher,
 			LynxeEventPublisher lynxeEventPublisher, AgentInterruptionHelper agentInterruptionHelper,
-			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService, MemoryService memoryService,
-			ConversationMemoryLimitService conversationMemoryLimitService,
+			ObjectMapper objectMapper, ParallelExecutionService parallelExecutionService,
+			MemoryService memoryService, ConversationMemoryLimitService conversationMemoryLimitService,
 			ServiceGroupIndexService serviceGroupIndexService) {
 		super(llmService, planExecutionRecorder, lynxeProperties, name, description, nextStepPrompt, availableToolKeys,
 				toolCallingManager, initialAgentSetting, userInputService, modelName, streamingResponseHandler, step,
-				planIdDispatcher, lynxeEventPublisher, agentInterruptionHelper, objectMapper, parallelExecutionService,
-				memoryService, conversationMemoryLimitService, serviceGroupIndexService);
+				planIdDispatcher, lynxeEventPublisher, agentInterruptionHelper, objectMapper,
+				parallelExecutionService, memoryService, conversationMemoryLimitService, serviceGroupIndexService);
 		this.serviceGroupIndexService = serviceGroupIndexService;
 	}
 

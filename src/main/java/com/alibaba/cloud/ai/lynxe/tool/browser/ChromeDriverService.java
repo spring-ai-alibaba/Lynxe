@@ -673,8 +673,7 @@ public class ChromeDriverService implements IChromeDriverService {
 				// Note: This event fires both on normal close and unexpected crashes
 				if (browser != null) {
 					browser.onDisconnected((Browser disconnectedBrowser) -> {
-						// Use DEBUG level since this is expected during normal browser
-						// shutdown
+						// Use DEBUG level since this is expected during normal browser shutdown
 						log.debug("Browser disconnected for planId: {}", findPlanIdForBrowser(disconnectedBrowser));
 						// Mark driver as unhealthy for this planId
 						String disconnectedPlanId = findPlanIdForBrowser(disconnectedBrowser);
