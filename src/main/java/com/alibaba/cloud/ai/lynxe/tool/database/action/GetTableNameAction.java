@@ -62,7 +62,8 @@ public class GetTableNameAction extends AbstractDatabaseAction {
 		try (Connection conn = datasourceName != null && !datasourceName.trim().isEmpty()
 				? dataSourceService.getConnection(datasourceName) : dataSourceService.getConnection();
 				PreparedStatement ps = conn.prepareStatement(sql)) {
-			// Set parameters for fuzzy search: both TABLE_NAME and TABLE_COMMENT LIKE conditions
+			// Set parameters for fuzzy search: both TABLE_NAME and TABLE_COMMENT LIKE
+			// conditions
 			String searchPattern = "%" + text + "%";
 			ps.setString(1, searchPattern);
 			ps.setString(2, searchPattern);
