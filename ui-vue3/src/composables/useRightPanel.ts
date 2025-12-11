@@ -75,7 +75,7 @@ export function useRightPanel() {
     )
 
     // Search through all plan execution records
-    for (const [planId, record] of Object.entries(planExecution.planExecutionRecords.value)) {
+    for (const [_planId, record] of Object.entries(planExecution.planExecutionRecords.value)) {
       // Check if this record's rootPlanId or currentPlanId matches
       const recordKey = record.rootPlanId || record.currentPlanId
       if (!recordKey) {
@@ -281,7 +281,7 @@ export function useRightPanel() {
    * since currentRootPlanId is now reactively derived from useMessageDialog
    * @param rootPlanId - The root plan ID to update (deprecated, kept for compatibility)
    */
-  const updateDisplayedPlanProgress = (rootPlanId: string): void => {
+  const updateDisplayedPlanProgress = (_rootPlanId: string): void => {
     // console.log('[useRightPanel] updateDisplayedPlanProgress called with rootPlanId:', rootPlanId)
     // No-op: currentRootPlanId is now reactively derived from useMessageDialog
   }
