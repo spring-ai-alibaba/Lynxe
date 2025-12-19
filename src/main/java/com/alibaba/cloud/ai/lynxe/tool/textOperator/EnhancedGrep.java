@@ -38,8 +38,10 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.cloud.ai.lynxe.config.LynxeProperties;
 import com.alibaba.cloud.ai.lynxe.tool.AbstractBaseTool;
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
+import com.alibaba.cloud.ai.lynxe.tool.filesystem.GitIgnoreMatcher;
 import com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager;
 import com.alibaba.cloud.ai.lynxe.tool.i18n.ToolI18nService;
 import com.alibaba.cloud.ai.lynxe.tool.innerStorage.SmartContentSavingService;
@@ -275,10 +277,17 @@ public class EnhancedGrep extends AbstractBaseTool<EnhancedGrep.GrepInput> {
 
 	private final ToolI18nService toolI18nService;
 
-	public EnhancedGrep(TextFileService textFileService, ObjectMapper objectMapper, ToolI18nService toolI18nService) {
+	private final GitIgnoreMatcher gitIgnoreMatcher;
+
+	private final LynxeProperties lynxeProperties;
+
+	public EnhancedGrep(TextFileService textFileService, ObjectMapper objectMapper, ToolI18nService toolI18nService,
+			GitIgnoreMatcher gitIgnoreMatcher, LynxeProperties lynxeProperties) {
 		this.textFileService = textFileService;
 		this.objectMapper = objectMapper;
 		this.toolI18nService = toolI18nService;
+		this.gitIgnoreMatcher = gitIgnoreMatcher;
+		this.lynxeProperties = lynxeProperties;
 	}
 
 	@Override
@@ -341,6 +350,54 @@ public class EnhancedGrep extends AbstractBaseTool<EnhancedGrep.GrepInput> {
 		catch (Exception e) {
 			log.error("Error executing grep", e);
 			return new ToolExecuteResult("Error executing grep: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Determine the root path for ignore file matching. If searching within
+	 * linked_external, use the actual external folder root. Otherwise, use the search
+	 * root.
+	 * @param searchRoot The search root path
+	 * @return Root path for ignore file matching
+	 */
+	private Path determineIgnoreRootPath(Path searchRoot) {
+		if (searchRoot == null) {
+			return null;
+		}
+
+		try {
+			Path normalized = searchRoot.toAbsolutePath().normalize();
+			String pathString = normalized.toString();
+
+			// Check if we're searching within linked_external directory
+			if (pathString.contains("linked_external")) {
+				// Find the linked_external directory in the path
+				Path current = normalized;
+				while (current != null && current.getNameCount() > 0) {
+					if ("linked_external".equals(current.getFileName().toString())) {
+						// This is the linked_external symlink, use its target as the
+						// ignore root
+						// For symlinks, we want to use the actual target directory
+						try {
+							Path realPath = current.toRealPath();
+							log.debug("Using external folder root for ignore patterns: {}", realPath);
+							return realPath;
+						}
+						catch (IOException e) {
+							log.debug("Could not resolve real path for linked_external, using as-is: {}", current, e);
+							return current;
+						}
+					}
+					current = current.getParent();
+				}
+			}
+
+			// Default: use search root
+			return normalized;
+		}
+		catch (Exception e) {
+			log.warn("Error determining ignore root path, using search root: {}", searchRoot, e);
+			return searchRoot;
 		}
 	}
 
@@ -435,6 +492,12 @@ public class EnhancedGrep extends AbstractBaseTool<EnhancedGrep.GrepInput> {
 		Set<String> finalExtensions = extensions;
 		Path rootPath = root;
 
+		// Initialize GitIgnoreMatcher if respectGitIgnore is enabled
+		boolean respectGitIgnore = lynxeProperties.getRespectGitIgnore() != null
+				&& lynxeProperties.getRespectGitIgnore();
+		Path ignoreRootPath = determineIgnoreRootPath(root);
+		gitIgnoreMatcher.initialize(ignoreRootPath, respectGitIgnore);
+
 		// Walk directory tree, following symbolic links to traverse linked_external
 		// Use walkFileTree to handle circular symlinks gracefully by skipping problematic
 		// directories
@@ -453,6 +516,12 @@ public class EnhancedGrep extends AbstractBaseTool<EnhancedGrep.GrepInput> {
 				if (pathString.length() > MAX_PATH_LENGTH) {
 					log.warn("Path length {} exceeds maximum ({}). Skipping directory: {}", pathString.length(),
 							MAX_PATH_LENGTH, dir);
+					return FileVisitResult.SKIP_SUBTREE;
+				}
+
+				// Check if directory should be skipped based on ignore rules
+				if (respectGitIgnore && gitIgnoreMatcher.shouldSkipDirectory(dir)) {
+					log.debug("Skipping directory due to ignore rules: {}", dir);
 					return FileVisitResult.SKIP_SUBTREE;
 				}
 
@@ -476,6 +545,12 @@ public class EnhancedGrep extends AbstractBaseTool<EnhancedGrep.GrepInput> {
 
 				// Skip hidden files
 				if (isHidden(file)) {
+					return FileVisitResult.CONTINUE;
+				}
+
+				// Check if file should be ignored based on ignore rules
+				if (respectGitIgnore && gitIgnoreMatcher.isIgnored(file)) {
+					log.debug("Skipping file due to ignore rules: {}", file);
 					return FileVisitResult.CONTINUE;
 				}
 

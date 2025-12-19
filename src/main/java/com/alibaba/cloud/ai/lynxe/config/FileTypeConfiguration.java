@@ -15,11 +15,11 @@
  */
 package com.alibaba.cloud.ai.lynxe.config;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.springframework.stereotype.Component;
 
 /**
  * File Type Configuration Manager - Centrally manages all supported file types
@@ -33,7 +33,8 @@ import java.util.stream.Stream;
 public class FileTypeConfiguration {
 
 	// Document files
-	public static final Set<String> DOCUMENTS = Set.of("pdf", "txt", "md", "markdown", "rst", "adoc", "doc", "docx");
+	public static final Set<String> DOCUMENTS = Set.of("pdf", "txt", "md", "markdown", "rst", "adoc", "doc", "docx",
+			"eml");
 
 	// Spreadsheet files
 	public static final Set<String> SPREADSHEETS = Set.of("xlsx", "xls", "csv", "tsv");

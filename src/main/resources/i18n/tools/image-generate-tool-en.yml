@@ -1,0 +1,38 @@
+description: |
+  Generate images from text prompts using AI image generation models.
+  Use this tool when you need to create images based on text descriptions.
+  
+  The tool returns image URLs that can be used to display or download the generated images.
+
+parameters: |
+  {
+      "type": "object",
+      "properties": {
+          "prompt": {
+              "type": "string",
+              "description": "Text prompt describing the image to generate (required)"
+          },
+          "model": {
+              "type": "string",
+              "description": "Model to use for image generation (optional, uses default from config if not specified)"
+          },
+          "size": {
+              "type": "string",
+              "enum": ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"],
+              "description": "Image size (optional, default: 1024x1024). Supported sizes: 256x256, 512x512, 1024x1024, 1792x1024, 1024x1792"
+          },
+          "quality": {
+              "type": "string",
+              "enum": ["standard", "hd"],
+              "description": "Image quality (optional, default: standard)"
+          },
+          "n": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "Number of images to generate (optional, default: 1). Range: 1-10"
+          }
+      },
+      "required": ["prompt"],
+      "additionalProperties": false
+  }

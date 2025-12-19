@@ -143,4 +143,50 @@ public abstract class AbstractBaseTool<I> implements ToolCallBiFunctionDef<I> {
 		}
 	}
 
+	/**
+	 * Normalize baseUrl by removing trailing slashes
+	 * @param baseUrl The base URL to normalize
+	 * @return Normalized base URL
+	 */
+	public static String normalizeBaseUrl(String baseUrl) {
+		if (baseUrl == null || baseUrl.trim().isEmpty()) {
+			return baseUrl;
+		}
+		String normalized = baseUrl.trim();
+		// Remove trailing slashes
+		while (normalized.endsWith("/")) {
+			normalized = normalized.substring(0, normalized.length() - 1);
+		}
+		return normalized;
+	}
+
+	/**
+	 * Normalize baseUrl for API endpoints that internally use /v1 prefix to avoid
+	 * duplicate /v1 segments Similar to normalizeCompletionsPath logic in LlmService.
+	 * This is useful for APIs like OpenAiImageApi which internally uses
+	 * /v1/images/generations. If baseUrl ends with /v1, we remove it to prevent duplicate
+	 * /v1 in the final URL
+	 * @param baseUrl The normalized base URL (should already have trailing slashes
+	 * removed)
+	 * @return Base URL normalized for API endpoints that use /v1 prefix internally
+	 */
+	public static String normalizeBaseUrlForApiEndpoint(String baseUrl) {
+		if (baseUrl == null || baseUrl.trim().isEmpty()) {
+			return baseUrl;
+		}
+
+		// If baseUrl ends with /v1, remove it to avoid duplicate /v1
+		// Example: "https://openrouter.ai/api/v1" -> "https://openrouter.ai/api"
+		// This works for APIs that internally add /v1 prefix to their endpoints
+		if (baseUrl.endsWith("/v1")) {
+			String normalized = baseUrl.substring(0, baseUrl.length() - 3); // Remove
+																			// "/v1"
+			log.info("Normalized baseUrl for API endpoint from '{}' to '{}' to avoid duplicate /v1 in URL", baseUrl,
+					normalized);
+			return normalized;
+		}
+
+		return baseUrl;
+	}
+
 }

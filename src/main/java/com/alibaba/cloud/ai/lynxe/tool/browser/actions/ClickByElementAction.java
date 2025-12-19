@@ -52,6 +52,69 @@ public class ClickByElementAction extends BrowserAction {
 				int elementTimeout = getElementTimeoutMs();
 				log.debug("Using element timeout: {}ms for click operations", elementTimeout);
 
+				// Special handling for checkbox inputs: try to find and click the
+				// associated label
+				// This is especially important for Element UI checkboxes where the input
+				// is hidden
+				Object checkboxCheckResult = locator
+					.evaluate("el => el && el.tagName === 'INPUT' && el.type === 'checkbox'");
+				Boolean isCheckbox = checkboxCheckResult instanceof Boolean ? (Boolean) checkboxCheckResult : null;
+				if (Boolean.TRUE.equals(isCheckbox)) {
+					log.debug("Element at index {} is a checkbox input, attempting to find associated label", index);
+
+					// Use JavaScript to find and click the label element instead
+					// This handles Element UI checkboxes where the input is hidden
+					// and standard HTML checkboxes with label associations
+					try {
+						Object jsClickResult = locator.evaluate(
+								"""
+										(el) => {
+											// First, try to find parent label (works for Element UI and standard HTML)
+											let label = el.closest('label');
+
+											// If not found, try to find label by 'for' attribute matching input's id
+											if (!label && el.id) {
+												label = document.querySelector('label[for="' + el.id + '"]');
+											}
+
+											// For Element UI, also check for parent with class 'el-checkbox'
+											// This handles cases where label wraps the checkbox
+											if (!label) {
+												let parent = el.parentElement;
+												while (parent && parent !== document.body) {
+													if (parent.tagName === 'LABEL' && parent.classList.contains('el-checkbox')) {
+														label = parent;
+														break;
+													}
+													parent = parent.parentElement;
+												}
+											}
+
+											// If label found, click it
+											if (label) {
+												label.click();
+												return true;
+											}
+											return false;
+										}
+										""");
+						Boolean labelClicked = jsClickResult instanceof Boolean ? (Boolean) jsClickResult : null;
+
+						if (Boolean.TRUE.equals(labelClicked)) {
+							log.debug("Successfully clicked label for checkbox using JavaScript");
+							Thread.sleep(500);
+							return;
+						}
+						else {
+							log.debug("No associated label found for checkbox, will try clicking input directly");
+						}
+					}
+					catch (Exception jsError) {
+						log.debug("JavaScript label click failed, will try clicking input directly: {}",
+								jsError.getMessage());
+					}
+				}
+
 				// For other elements, use standard waiting strategy
 				// Wait for element to be visible and enabled before clicking
 				locator.waitFor(new Locator.WaitForOptions().setTimeout(elementTimeout)

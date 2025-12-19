@@ -141,10 +141,11 @@ public class MarkdownConverterTool extends AbstractBaseTool<MarkdownConverterToo
 				case "xlsx", "xls" -> processExcelToMarkdown(sourceFile, additionalRequirement);
 				case "pdf" -> processPdfToMarkdown(sourceFile, additionalRequirement, forceLlmForPdf);
 				case "jpg", "jpeg", "png", "gif" -> processImageToMarkdown(sourceFile, additionalRequirement);
+				case "eml" -> processEmlToMarkdown(sourceFile, additionalRequirement);
 				case "txt", "md", "json", "xml", "yaml", "yml", "log", "java", "py", "js", "html", "css" ->
 					processTextToMarkdown(sourceFile, additionalRequirement);
 				default -> new ToolExecuteResult("Error: Unsupported file type: " + extension
-						+ ". Supported types: .doc, .docx, .xlsx, .xls, .pdf, .jpg, .jpeg, .png, .gif, .txt, .md, .json, .xml, .yaml, .yml, .log, .java, .py, .js, .html, .css");
+						+ ". Supported types: .doc, .docx, .xlsx, .xls, .pdf, .jpg, .jpeg, .png, .gif, .eml, .txt, .md, .json, .xml, .yaml, .yml, .log, .java, .py, .js, .html, .css");
 			};
 
 		}
@@ -216,6 +217,20 @@ public class MarkdownConverterTool extends AbstractBaseTool<MarkdownConverterToo
 		catch (Exception e) {
 			log.error("Image to Markdown conversion failed: {}", sourceFile.getFileName(), e);
 			return new ToolExecuteResult("Image conversion error: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Process EML email files to Markdown
+	 */
+	private ToolExecuteResult processEmlToMarkdown(Path sourceFile, String additionalRequirement) {
+		try {
+			EmlToMarkdownProcessor processor = new EmlToMarkdownProcessor(directoryManager);
+			return processor.convertToMarkdown(sourceFile, additionalRequirement, rootPlanId);
+		}
+		catch (Exception e) {
+			log.error("EML to Markdown conversion failed: {}", sourceFile.getFileName(), e);
+			return new ToolExecuteResult("EML conversion error: " + e.getMessage());
 		}
 	}
 

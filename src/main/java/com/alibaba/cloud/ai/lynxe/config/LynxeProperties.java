@@ -356,6 +356,30 @@ public class LynxeProperties {
 		this.externalLinkedFolder = externalLinkedFolder;
 	}
 
+	@ConfigProperty(group = "lynxe", subGroup = "general", key = "respectGitIgnore",
+			path = "lynxe.general.respectGitIgnore", description = "lynxe.general.respectGitIgnore.description",
+			defaultValue = "true", inputType = ConfigInputType.CHECKBOX,
+			options = { @ConfigOption(value = "true", label = "lynxe.general.respectGitIgnore.option.true"),
+					@ConfigOption(value = "false", label = "lynxe.general.respectGitIgnore.option.false") })
+	private volatile Boolean respectGitIgnore;
+
+	public Boolean getRespectGitIgnore() {
+		String configPath = "lynxe.general.respectGitIgnore";
+		String value = configService.getConfigValue(configPath);
+		if (value != null) {
+			respectGitIgnore = Boolean.valueOf(value);
+		}
+		// Default to true if not configured
+		if (respectGitIgnore == null) {
+			respectGitIgnore = true;
+		}
+		return respectGitIgnore;
+	}
+
+	public void setRespectGitIgnore(Boolean respectGitIgnore) {
+		this.respectGitIgnore = respectGitIgnore;
+	}
+
 	// MCP Service Loader Settings
 	// Begin--------------------------------------------------------------------------------------------
 

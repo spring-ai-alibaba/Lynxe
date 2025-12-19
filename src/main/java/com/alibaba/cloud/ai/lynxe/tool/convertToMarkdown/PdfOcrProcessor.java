@@ -42,6 +42,7 @@ import org.springframework.util.MimeTypeUtils;
 import com.alibaba.cloud.ai.lynxe.config.LynxeProperties;
 import com.alibaba.cloud.ai.lynxe.llm.LlmService;
 import com.alibaba.cloud.ai.lynxe.runtime.executor.ImageRecognitionExecutorPool;
+import com.alibaba.cloud.ai.lynxe.tool.AbstractBaseTool;
 import com.alibaba.cloud.ai.lynxe.tool.code.ToolExecuteResult;
 import com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager;
 
@@ -544,6 +545,19 @@ public class PdfOcrProcessor {
 			return "./" + filename;
 		}
 		return filename;
+	}
+
+	/**
+	 * Normalize baseUrl for API endpoints (uses common method from AbstractBaseTool) This
+	 * method can be used when creating API clients that need baseUrl normalization
+	 * @param baseUrl The base URL to normalize
+	 * @return Normalized base URL for API endpoints
+	 */
+	private String normalizeBaseUrlForApi(String baseUrl) {
+		// First normalize by removing trailing slashes
+		String normalized = AbstractBaseTool.normalizeBaseUrl(baseUrl);
+		// Then normalize for API endpoints that use /v1 prefix internally
+		return AbstractBaseTool.normalizeBaseUrlForApiEndpoint(normalized);
 	}
 
 	/**

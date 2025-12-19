@@ -408,6 +408,57 @@ public class LlmService implements LynxeListener<ModelChangeEvent> {
 		return enhancedWebClientBuilder;
 	}
 
+	/**
+	 * Normalize baseUrl by removing trailing slashes
+	 * @param baseUrl The base URL to normalize
+	 * @return Normalized base URL
+	 */
+	private String normalizeBaseUrl(String baseUrl) {
+		if (baseUrl == null || baseUrl.trim().isEmpty()) {
+			return baseUrl;
+		}
+		String normalized = baseUrl.trim();
+		// Remove trailing slashes
+		while (normalized.endsWith("/")) {
+			normalized = normalized.substring(0, normalized.length() - 1);
+		}
+		return normalized;
+	}
+
+	/**
+	 * Normalize completionsPath to avoid duplicate /v1 segments when baseUrl already
+	 * contains /v1
+	 * @param baseUrl The normalized base URL
+	 * @param completionsPath The completions path to normalize
+	 * @return Normalized completions path
+	 */
+	private String normalizeCompletionsPath(String baseUrl, String completionsPath) {
+		if (completionsPath == null || completionsPath.trim().isEmpty()) {
+			// Use default path if not provided
+			return "/v1/chat/completions";
+		}
+		String normalized = completionsPath.trim();
+
+		// Ensure path starts with /
+		if (!normalized.startsWith("/")) {
+			normalized = "/" + normalized;
+		}
+
+		// If baseUrl ends with /v1 and completionsPath starts with /v1, remove /v1 from
+		// completionsPath
+		if (baseUrl != null && baseUrl.endsWith("/v1") && normalized.startsWith("/v1/")) {
+			normalized = normalized.substring(3); // Remove "/v1" prefix
+			// Ensure it still starts with /
+			if (!normalized.startsWith("/")) {
+				normalized = "/" + normalized;
+			}
+			log.info("Normalized completionsPath from '{}' to '{}' to avoid duplicate /v1 in URL", completionsPath,
+					normalized);
+		}
+
+		return normalized;
+	}
+
 	private OpenAiApi openAiApi(RestClient.Builder restClientBuilder, WebClient.Builder webClientBuilder,
 			DynamicModelEntity dynamicModelEntity) {
 		Map<String, String> headers = dynamicModelEntity.getHeaders();
@@ -420,10 +471,12 @@ public class LlmService implements LynxeListener<ModelChangeEvent> {
 		WebClient.Builder enhancedWebClientBuilder = createEnhancedWebClientBuilder(webClientBuilder,
 				dynamicModelEntity);
 
-		String completionsPath = dynamicModelEntity.getCompletionsPath();
+		// Normalize baseUrl and completionsPath to avoid duplicate /v1 segments
+		String baseUrl = normalizeBaseUrl(dynamicModelEntity.getBaseUrl());
+		String completionsPath = normalizeCompletionsPath(baseUrl, dynamicModelEntity.getCompletionsPath());
 
-		return new OpenAiApi(dynamicModelEntity.getBaseUrl(), new SimpleApiKey(dynamicModelEntity.getApiKey()),
-				multiValueMap, completionsPath, "/v1/embeddings", restClientBuilder, enhancedWebClientBuilder,
+		return new OpenAiApi(baseUrl, new SimpleApiKey(dynamicModelEntity.getApiKey()), multiValueMap, completionsPath,
+				"/v1/embeddings", restClientBuilder, enhancedWebClientBuilder,
 				RetryUtils.DEFAULT_RESPONSE_ERROR_HANDLER) {
 
 			@Override

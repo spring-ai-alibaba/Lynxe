@@ -155,6 +155,21 @@ public class SymbolicLinkDetector {
 	 */
 	public SimpleFileVisitor<Path> createSafeFileVisitor(Path rootPath, FileCallback onFile,
 			DirectoryCallback onDirectory) {
+		return createSafeFileVisitor(rootPath, onFile, onDirectory, null);
+	}
+
+	/**
+	 * Create a FileVisitor that safely handles symbolic links during directory traversal.
+	 * This visitor tracks visited directories to prevent infinite loops and respects
+	 * ignore file rules.
+	 * @param rootPath The root path being traversed
+	 * @param onFile Callback for each regular file encountered
+	 * @param onDirectory Callback for each directory encountered (before entering)
+	 * @param gitIgnoreMatcher Optional GitIgnoreMatcher to respect ignore file rules
+	 * @return A FileVisitor that handles symlinks safely
+	 */
+	public SimpleFileVisitor<Path> createSafeFileVisitor(Path rootPath, FileCallback onFile,
+			DirectoryCallback onDirectory, GitIgnoreMatcher gitIgnoreMatcher) {
 
 		// Track visited real paths to prevent cycles
 		Set<Path> visitedRealPaths = new HashSet<>();
@@ -181,6 +196,12 @@ public class SymbolicLinkDetector {
 				// Mark as visited
 				visitedRealPaths.add(realPath);
 
+				// Check if directory should be skipped based on ignore rules
+				if (gitIgnoreMatcher != null && gitIgnoreMatcher.shouldSkipDirectory(dir)) {
+					log.debug("Skipping directory due to ignore rules: {}", dir);
+					return FileVisitResult.SKIP_SUBTREE;
+				}
+
 				// Check if this is a symbolic link
 				if (Files.isSymbolicLink(dir)) {
 					// Check for circular reference
@@ -204,6 +225,12 @@ public class SymbolicLinkDetector {
 
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				// Check if file should be ignored based on ignore rules
+				if (gitIgnoreMatcher != null && gitIgnoreMatcher.isIgnored(file)) {
+					log.debug("Skipping file due to ignore rules: {}", file);
+					return FileVisitResult.CONTINUE;
+				}
+
 				if (onFile != null) {
 					onFile.onFile(file, attrs);
 				}

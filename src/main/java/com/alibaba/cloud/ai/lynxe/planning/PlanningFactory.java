@@ -32,6 +32,7 @@ import org.springframework.ai.model.tool.ToolCallingManager;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.tool.metadata.ToolMetadata;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -51,6 +52,7 @@ import com.alibaba.cloud.ai.lynxe.llm.StreamingResponseHandler;
 import com.alibaba.cloud.ai.lynxe.mcp.model.vo.McpServiceEntity;
 import com.alibaba.cloud.ai.lynxe.mcp.model.vo.McpTool;
 import com.alibaba.cloud.ai.lynxe.mcp.service.McpService;
+import com.alibaba.cloud.ai.lynxe.model.repository.DynamicModelRepository;
 import com.alibaba.cloud.ai.lynxe.planning.service.PlanFinalizer;
 import com.alibaba.cloud.ai.lynxe.recorder.service.PlanExecutionRecorder;
 import com.alibaba.cloud.ai.lynxe.runtime.executor.ImageRecognitionExecutorPool;
@@ -79,9 +81,11 @@ import com.alibaba.cloud.ai.lynxe.tool.database.DatabaseWriteTool;
 import com.alibaba.cloud.ai.lynxe.tool.database.UuidGenerateTool;
 import com.alibaba.cloud.ai.lynxe.tool.dirOperator.DirectoryOperator;
 import com.alibaba.cloud.ai.lynxe.tool.excelProcessor.IExcelProcessingService;
+import com.alibaba.cloud.ai.lynxe.tool.filesystem.GitIgnoreMatcher;
 import com.alibaba.cloud.ai.lynxe.tool.filesystem.SymbolicLinkDetector;
 import com.alibaba.cloud.ai.lynxe.tool.filesystem.UnifiedDirectoryManager;
 import com.alibaba.cloud.ai.lynxe.tool.i18n.ToolI18nService;
+import com.alibaba.cloud.ai.lynxe.tool.image.ImageGenerationTool;
 import com.alibaba.cloud.ai.lynxe.tool.innerStorage.SmartContentSavingService;
 import com.alibaba.cloud.ai.lynxe.tool.jsxGenerator.JsxGeneratorOperator;
 import com.alibaba.cloud.ai.lynxe.tool.mapreduce.FileBasedParallelExecutionTool;
@@ -193,6 +197,15 @@ public class PlanningFactory {
 	@Autowired
 	private SymbolicLinkDetector symlinkDetector;
 
+	@Autowired
+	private GitIgnoreMatcher gitIgnoreMatcher;
+
+	@Autowired
+	private DynamicModelRepository dynamicModelRepository;
+
+	@Autowired
+	private ObjectProvider<RestClient.Builder> restClientBuilderProvider;
+
 	public PlanningFactory(ChromeDriverService chromeDriverService, PlanExecutionRecorder recorder,
 			LynxeProperties lynxeProperties, TextFileService textFileService, McpService mcpService,
 			SmartContentSavingService innerStorageService, UnifiedDirectoryManager unifiedDirectoryManager,
@@ -274,7 +287,8 @@ public class PlanningFactory {
 					shortUrlService, toolI18nService));
 			toolDefinitions.add(new GlobalFileWriteOperator(textFileService, innerStorageService, objectMapper,
 					shortUrlService, toolI18nService));
-			toolDefinitions.add(new EnhancedGrep(textFileService, objectMapper, toolI18nService));
+			toolDefinitions.add(new EnhancedGrep(textFileService, objectMapper, toolI18nService, gitIgnoreMatcher,
+					lynxeProperties));
 			toolDefinitions.add(new FileImportOperator(textFileService, null, toolI18nService));
 			toolDefinitions.add(new FileSplitterTool(textFileService, objectMapper, toolI18nService));
 			toolDefinitions
@@ -299,6 +313,8 @@ public class PlanningFactory {
 					new ImageOcrProcessor(unifiedDirectoryManager, llmService, lynxeProperties,
 							new ImageRecognitionExecutorPool(lynxeProperties)),
 					excelProcessingService, objectMapper, toolI18nService));
+			toolDefinitions.add(new ImageGenerationTool(dynamicModelRepository, restClientBuilderProvider, objectMapper,
+					toolI18nService));
 			// toolDefinitions.add(new ExcelProcessorTool(excelProcessingService));
 		}
 		else {

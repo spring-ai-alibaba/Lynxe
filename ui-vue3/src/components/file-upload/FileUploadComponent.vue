@@ -53,9 +53,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, watch, computed } from 'vue'
-import { Icon } from '@iconify/vue'
-import { useI18n } from 'vue-i18n'
 import {
   FileInfo,
   FileUploadApiService,
@@ -63,6 +60,9 @@ import {
   type FileUploadResult,
 } from '@/api/file-upload-api-service'
 import { useFileUploadSingleton } from '@/composables/useFileUpload'
+import { Icon } from '@iconify/vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
@@ -82,7 +82,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<FileUploadProps>(), {
   acceptedFileTypes:
-    '.pdf,.txt,.md,.doc,.docx,.csv,.xlsx,.xls,.json,.xml,.html,.htm,.mhtml,.log,.java,.py,.js,.ts,.sql,.sh,.bat,.yaml,.yml,.properties,.conf,.ini,.jpg,.jpeg,.png,.gif',
+    '.pdf,.txt,.md,.doc,.docx,.csv,.xlsx,.xls,.json,.xml,.html,.htm,.mhtml,.log,.java,.py,.js,.ts,.sql,.sh,.bat,.yaml,.yml,.properties,.conf,.ini,.jpg,.jpeg,.png,.gif,.eml',
   disabled: false,
 })
 

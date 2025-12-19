@@ -137,9 +137,11 @@
                         class="form-input model-search-input"
                         :placeholder="getModelPlaceholder(index)"
                         :disabled="isLoadingModels"
+                        autocomplete="off"
                         @click.stop="openModelDropdown(index)"
                         @focus="openModelDropdown(index)"
                         @input="handleModelSearchInput($event, index)"
+                        @blur="handleModelInputBlur(index)"
                         @keydown.escape="closeModelDropdown(index)"
                         @keydown.enter.prevent="selectFirstFilteredModel(index)"
                         @keydown.down.prevent="navigateModelDown(index)"
@@ -783,7 +785,14 @@ const closeModelDropdown = (stepIndex: number) => {
   openDropdownSteps.value.delete(stepIndex)
   highlightedIndices.value.set(stepIndex, -1)
   // Reset search filter to selected model name
+  // Only reset if there's a model name, otherwise keep it empty (user cleared it)
   const step = displayData.steps[stepIndex]
+  const currentFilter = getSearchFilter(stepIndex)
+  // If user cleared the input (empty filter), keep it empty and clear modelName
+  if (currentFilter === '' && step) {
+    step.modelName = ''
+  }
+  // Only reset filter if there's a model name to show
   setSearchFilter(stepIndex, step.modelName ?? '')
 }
 
@@ -807,8 +816,33 @@ const selectModelForStep = (modelName: string, stepIndex: number) => {
 const handleModelSearchInput = (event: Event, stepIndex: number) => {
   setEditingFlag()
   const target = event.target as HTMLInputElement
-  setSearchFilter(stepIndex, target.value)
+  const inputValue = target.value
+  setSearchFilter(stepIndex, inputValue)
+
+  // Update step.modelName when user clears the input
+  // This prevents auto-refill when the entire field is deleted
+  const step = displayData.steps[stepIndex]
+  if (step && inputValue === '') {
+    step.modelName = ''
+  }
+
   openModelDropdown(stepIndex)
+}
+
+// Handle model input blur - ensure cleared value persists
+const handleModelInputBlur = (stepIndex: number) => {
+  const step = displayData.steps[stepIndex]
+  const currentFilter = getSearchFilter(stepIndex)
+
+  // If user cleared the input, ensure modelName is also cleared
+  if (step && currentFilter === '') {
+    step.modelName = ''
+  }
+
+  // Close dropdown after a short delay to allow click events on dropdown items
+  setTimeout(() => {
+    closeModelDropdown(stepIndex)
+  }, 200)
 }
 
 // Get highlighted index for a step

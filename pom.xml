@@ -7,7 +7,7 @@
     <groupId>com.lynxe</groupId>
     <name>Lynxe - AI Agent Management System</name>
     <artifactId>lynxe</artifactId>
-    <version>4.9.0</version>
+    <version>4.9.1</version>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -265,6 +265,17 @@
             </exclusions>
         </dependency>
 
+        <!-- Apache James Mime4j for EML file parsing -->
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>apache-mime4j-core</artifactId>
+            <version>0.8.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james</groupId>
+            <artifactId>apache-mime4j-dom</artifactId>
+            <version>0.8.9</version>
+        </dependency>
 
         <!-- H2 Database -->
         <dependency>

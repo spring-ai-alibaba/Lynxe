@@ -1,0 +1,38 @@
+description: |
+  使用 AI 图像生成模型根据文本提示生成图像。
+  当需要根据文本描述创建图像时使用此工具。
+  
+  工具返回图像 URL，可用于显示或下载生成的图像。
+
+parameters: |
+  {
+      "type": "object",
+      "properties": {
+          "prompt": {
+              "type": "string",
+              "description": "描述要生成的图像的文本提示（必填）"
+          },
+          "model": {
+              "type": "string",
+              "description": "用于图像生成的模型（可选，如果未指定则使用配置中的默认值）"
+          },
+          "size": {
+              "type": "string",
+              "enum": ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"],
+              "description": "图像尺寸（可选，默认：1024x1024）。支持的尺寸：256x256、512x512、1024x1024、1792x1024、1024x1792"
+          },
+          "quality": {
+              "type": "string",
+              "enum": ["standard", "hd"],
+              "description": "图像质量（可选，默认：standard）"
+          },
+          "n": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "description": "要生成的图像数量（可选，默认：1）。范围：1-10"
+          }
+      },
+      "required": ["prompt"],
+      "additionalProperties": false
+  }
