@@ -1159,37 +1159,37 @@ const words: I18nType = {
       stockPrice: {
         title: 'Query Stock Price',
         description: "Get today's latest stock price for Alphabet (Agent can use browser tools)",
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/eng/stock-price-query.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/stock-price-query.md',
       },
       weather: {
         title: 'IP Query',
         description:
           'Query geographic location and related information for specified IP addresses (Agent can use MCP tool services)',
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/eng/ip-query.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/ip-query.md',
       },
       queryplan: {
         title: 'Enhanced Research Search',
         description:
           'Search engines, download and read multiple pages, summarize key information (demonstrates functional calls)',
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/eng/query-plan.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/query-plan.md',
       },
       ainovel: {
         title: 'AI Novel Creation',
         description:
           'AI gradually defeats humanity themed novel (to demonstrate long-form content output)',
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/eng/ai-novel.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/ai-novel.md',
       },
       formInputDemo: {
         title: 'AI Intelligent Dynamic Form Demo',
         description:
           'Experience AI intelligent analysis of user needs and dynamic generation of relevant form fields',
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/eng/form-input-demo.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/form-input-demo.md',
       },
       imagePdfRecognition: {
         title: 'Image & PDF Recognition',
         description:
           'Upload images or PDFs and extract text content using OCR technology (demonstrates file processing capabilities)',
-        url: 'https://github.com/talk-flow/public-usecase/blob/main/chn/image-pdf-recognition.md',
+        url: 'https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/chn/image-pdf-recognition.md',
       },
     },
   },

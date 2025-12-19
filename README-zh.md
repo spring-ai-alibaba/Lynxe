@@ -32,7 +32,7 @@ Lynxe 也提供了 http 的服务调用能力，适合被集成到既有的项�
 
 ### 🛠️ **Func-Agent 模式**：
 
-精确控制每一步执行细节，提供极高的执行确定性并完成复杂的重复流程和功能。具体可以见 [Lynxe 案例集-Func-Agent 案例](https://github.com/talk-flow/public-usecase/blob/main/chn/query-plan.md)。
+精确控制每一步执行细节，提供极高的执行确定性并完成复杂的重复流程和功能。具体可以见 [Lynxe 案例集-Func-Agent 案例](https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/chn/query-plan.md)。
 ![Image](https://github.com/user-attachments/assets/00c8c292-a2d2-4c33-bab8-c4d45d1fa641)
 
 ### 🔗 **MCP 集成**：

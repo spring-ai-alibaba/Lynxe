@@ -36,7 +36,7 @@ A pure Java multi-agent collaboration implementation that provides a complete se
 
 ### 🛠️ **Func-Agent Mode**:
 
-Allows you to precisely control every execution detail, providing extremely high execution determinism and completing complex repetitive processes and functions. For specific examples, see [Lynxe Use Cases - FuncAgent Use Case](https://github.com/talk-flow/public-usecase/blob/main/eng/query-plan.md)
+Allows you to precisely control every execution detail, providing extremely high execution determinism and completing complex repetitive processes and functions. For specific examples, see [Lynxe Use Cases - FuncAgent Use Case](https://github.com/Lynxe-public/Lynxe-public-prompts/blob/main/eng/query-plan.md)
 
 ![Image](https://github.com/user-attachments/assets/0075b210-feed-4c67-97e1-e79756493e4e)
 
