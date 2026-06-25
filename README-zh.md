@@ -277,11 +277,6 @@ mvn spring-boot:run
 **由 Spring AI Alibaba 团队用心打造 ❤️**
 
 ⭐ 如果 Lynxe 加速了您的开发之旅，请在 **GitHub 上给我们点亮一颗星**！
-
-## 交流讨论
-
-点击这个链接加入钉钉群讨论：[钉群链接](https://qr.dingtalk.com/action/joingroup?code=v1,k1,PBuFX00snERuKcnnG4YAPK52FOXwAkLYlulUUD9KiRo=&_dt_no_comment=1&origin=11)
-
 📚 开发者文档: [Quick Start (EN)](./README-dev-en.md) | [开发者快速入门 (中文)](./README-dev.md)
 
 </div>
