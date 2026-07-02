@@ -4,11 +4,22 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: postgres
     password: 123456
+  # 初始化脚本配置
+  sql:
+    init:
+      mode: always # 执行时机：always=每次启动都执行（开发环境）| embedded=仅嵌入式数据库| never=不执行
+      platform: postgresql # 指定脚本后缀（匹配schema-postgresql.sql）
+      encoding: utf-8
+      # 可选：指定脚本路径（默认就是resources/schema.sql，无需改）
+      # schema-locations: classpath:schema-postgresql.sql
+      # 核心1：自定义语句分隔符（用非分号的符号，避免拆分$$内的语句）
+      separator: ;GO;
   ai:
     memory:
       postgres:
         enabled: true
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+#      org.hibernate.tool.schema.Action
+      ddl-auto: create-only
+#      ddl-auto: create
